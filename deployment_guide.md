@@ -116,6 +116,56 @@ To run YP Arena OS as a B2B SaaS business, you must host your marketing portal, 
 
 ---
 
+## 5. ⚡ One-Click Automated Deployments & Setup
+
+To simplify local café setups and cloud deployments, YP Arena OS includes a pre-packaged automation suite. Use these scripts to skip manual configuration.
+
+### A. Auto-Configure Local Master Server (Edge Server)
+On the Master Server computer at the front desk:
+1. Open Windows PowerShell as **Administrator**.
+2. Navigate to the `apps/edge-server` directory.
+3. Run the automated setup script:
+   ```powershell
+   Set-ExecutionPolicy Bypass -Scope Process -Force
+   .\setup-yparena-server.ps1
+   ```
+4. **What this does:**
+   - Detects and silently installs PostgreSQL using `winget` if missing.
+   - Prompts for your subscription License Key, café details, and database password.
+   - Automatically initializes the database and imports [schema.sql](file:///c:/Users/yashu/Desktop/YpArenaos/apps/edge-server/schema.sql).
+   - Generates the `.env` and `license.key` files automatically.
+   - Configures local Windows Firewall rules (Port `4000` TCP and Port `41234` UDP).
+   - Places an auto-startup launcher (`run-edge-server.bat`) in the Windows Startup directory.
+
+### B. Auto-Configure Gaming PC Clients
+On each gaming PC terminal:
+1. Open Windows PowerShell as **Administrator**.
+2. Navigate to the `apps/pc-client` directory.
+3. Run the client setup script:
+   ```powershell
+   Set-ExecutionPolicy Bypass -Scope Process -Force
+   .\setup-yparena-client.ps1
+   ```
+4. **What this does:**
+   - Opens the UDP Discovery Port `41234` on the terminal's local firewall.
+   - Configures the secure client kiosk launcher (`run-pc-client.bat`) to execute automatically on Windows startup.
+
+### C. Auto-Configure Cloud Server (AWS EC2)
+On your clean Ubuntu EC2 instance:
+1. Connect to the instance via SSH.
+2. Clone your Git repository and navigate to `apps/saas-central-server`.
+3. Run the bash bootstrapper as root:
+   ```bash
+   sudo bash bootstrap-ec2.sh
+   ```
+4. **What this does:**
+   - Installs Node.js LTS, NPM, Git, Nginx, and Certbot.
+   - Pulls package dependencies and runs [server.js](file:///c:/Users/yashu/Desktop/YpArenaos/apps/saas-central-server/server.js) as a background service via PM2.
+   - Autogenerates Nginx proxy configurations for your subdomain (e.g. `api.yparenaos.com`).
+   - Automatically triggers Let's Encrypt Certbot to fetch and configure SSL certificates (HTTPS) for the endpoint.
+
+---
+
 ## Your Launch Checklists
 
 ### B2B SaaS Company Launch Checklist (You)
