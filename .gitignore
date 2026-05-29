@@ -136,3 +136,7 @@ out/
 .next/
 node_modules/
 flutter/
+
+# Compiled installers and zip packages
+apps/installer/*.exe
+apps/installer/*.zip

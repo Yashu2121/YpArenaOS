@@ -6,6 +6,10 @@
 # and runs the NSIS compiler to create the lightweight Web Installer stub.
 # ==============================================================================
 
+# Set fast mirrors for Electron and electron-builder binaries to prevent GitHub download timeouts
+$env:ELECTRON_BUILDER_BINARIES_MIRROR = "https://npmmirror.com/mirrors/electron-builder-binaries/"
+$env:ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
+
 Clear-Host
 Write-Host "=======================================================================" -ForegroundColor Cyan
 Write-Host "          YP ARENA OS - UNIFIED WEB INSTALLER COMPILATION" -ForegroundColor Cyan
