@@ -66,6 +66,13 @@ Write-Host ""
 # ------------------------------------------------------------------------------
 Write-Host "[2/3] Compiling, packaging, and compressing sub-applications..." -ForegroundColor Green
 
+# Stop any running instances to release file locks
+Write-Host "Releasing file locks by stopping running YP Arena OS and Electron processes..." -ForegroundColor Yellow
+Stop-Process -Name "YP Arena OS*" -ErrorAction SilentlyContinue
+Stop-Process -Name "YpArenaos*" -ErrorAction SilentlyContinue
+Stop-Process -Name "electron" -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
+
 # Ensure target folder exists
 if (-not (Test-Path "apps\installer")) {
     New-Item -ItemType Directory -Path "apps\installer" | Out-Null

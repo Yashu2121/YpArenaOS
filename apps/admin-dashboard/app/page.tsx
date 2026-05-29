@@ -117,39 +117,6 @@ export default function AdminDashboard() {
     }
   }
 
-  async function fetchLicenseStatus() {
-    try {
-      const r = await fetch(`${API}/api/license/status`);
-      const data = await r.json();
-      setLicenseStatus(data);
-    } catch (e) { console.error('fetchLicenseStatus:', e); }
-  }
-
-  async function activateLicense() {
-    if (!newLicenseKey) {
-      alert('Please enter a license key.');
-      return;
-    }
-    try {
-      const r = await fetch(`${API}/api/license/activate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ licenseKey: newLicenseKey })
-      });
-      const data = await r.json();
-      if (r.ok) {
-        alert('License activated successfully!');
-        setNewLicenseKey('');
-        fetchLicenseStatus();
-        fetchStats();
-        fetchDevices();
-      } else {
-        alert(data.error || 'Failed to activate license');
-      }
-    } catch (e) {
-      alert('Error connecting to edge server to activate license.');
-    }
-  }
 
   async function addCustomPosItem() {
     if (!newPosItem.item_name || !newPosItem.price) {
