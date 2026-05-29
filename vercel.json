@@ -1,0 +1,4 @@
+{
+  "buildCommand": "npm run build --workspace=apps/landing-page",
+  "outputDirectory": "apps/landing-page/dist"
+}
