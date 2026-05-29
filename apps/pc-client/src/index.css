@@ -1,0 +1,157 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@layer base {
+  body {
+    @apply m-0 p-0 overflow-hidden select-none;
+    font-family: 'Inter', sans-serif;
+    background-color: #050505; /* Deep rich black */
+    color: #F3F4F6;
+  }
+}
+
+/* Base Layout container */
+.layout-root {
+  @apply relative w-screen h-screen overflow-hidden flex bg-black;
+}
+
+/* Ambient gradients for high-end professional feel */
+.ambient-gradient-1 {
+  position: absolute;
+  top: -20vh;
+  left: -20vw;
+  width: 70vw;
+  height: 70vw;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(0,0,0,0) 60%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: float1 25s ease-in-out infinite alternate;
+}
+
+.ambient-gradient-2 {
+  position: absolute;
+  bottom: -20vh;
+  right: -20vw;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(0,0,0,0) 60%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: float2 30s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes float1 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(10vw, 5vh) scale(1.1); }
+}
+
+@keyframes float2 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-5vw, -10vh) scale(1.1); }
+}
+
+/* Fine noise texture overlay for realism */
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* High-end glass morphism */
+.glass-modal {
+  background: rgba(15, 15, 18, 0.5);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08);
+  border-radius: 16px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.01);
+  backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+/* Sleek inputs */
+.sleek-input {
+  @apply w-full px-5 py-4 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-white outline-none transition-all duration-300;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.sleek-input:focus {
+  @apply bg-black/40 border-blue-500/50;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
+}
+
+/* Sleek primary button */
+.sleek-btn-primary {
+  @apply w-full px-6 py-4 bg-white text-black text-xs font-semibold tracking-widest uppercase rounded-lg transition-all duration-300 flex items-center justify-center cursor-pointer;
+}
+
+.sleek-btn-primary:hover {
+  @apply bg-gray-200 transform -translate-y-0.5;
+  box-shadow: 0 8px 24px rgba(255,255,255,0.15);
+}
+
+/* Sleek secondary button */
+.sleek-btn-secondary {
+  @apply w-full px-4 py-3 bg-white/5 hover:bg-white/10 text-white text-xs font-medium tracking-wide rounded-lg transition-colors border border-white/5 cursor-pointer;
+}
+
+/* Center util */
+.full-center {
+  @apply flex items-center justify-center;
+}
+
+/* Spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Fade in animation */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar restyling */
+::-webkit-scrollbar { 
+  width: 6px; 
+}
+::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb { 
+  background: rgba(255,255,255,0.1); 
+  border-radius: 10px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: rgba(255,255,255,0.2); 
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "key": "YP-CAFE-1234-VALID",
+    "cafeName": "Alpha Gaming Arena",
+    "ownerEmail": "alpha@arena.com",
+    "status": "active",
+    "createdAt": "2026-05-28T11:15:46.082Z",
+    "expiryDate": "2026-06-27T11:15:46.092Z",
+    "hardwareId": "985dc47a-f535-4ef3-80a5-b979503652d2"
+  },
+  {
+    "key": "YP-CAFE-5678-EXPIRED",
+    "cafeName": "Retro Arcade Zone",
+    "ownerEmail": "retro@arcade.com",
+    "status": "expired",
+    "createdAt": "2026-03-29T11:15:46.092Z",
+    "expiryDate": "2026-04-28T11:15:46.092Z",
+    "hardwareId": null
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "name": "yp-arena-os-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "YP Arena OS Monorepo for Client, Server Engine, and Dashboard",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:all": "npm run dev --workspaces --if-present",
+    "build:all": "npm run build --workspaces --if-present",
+    "lint:all": "npm run lint --workspaces --if-present"
+  }
+}

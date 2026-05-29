@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YP Arena OS - Central SaaS Partner Portal</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0c10;
+      --bg-secondary: #131722;
+      --bg-card: #1c2130;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.15);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.1);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.1);
+      --warning: #f59e0b;
+      --border: #2d3548;
+      --radius: 12px;
+      --font: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%);
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: white;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: 0.5px;
+      background: linear-gradient(to right, #ffffff, #d1d5db);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-badge {
+      background-color: var(--border);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .main-container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    @media (min-width: 900px) {
+      .main-container {
+        grid-template-columns: 350px 1fr;
+      }
+    }
+
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    input, select {
+      width: 100%;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      color: var(--text-main);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    }
+
+    .btn:hover {
+      opacity: 0.95;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background-color: rgba(255,255,255,0.02);
+      border-color: var(--text-muted);
+      box-shadow: none;
+    }
+
+    .license-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .license-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .license-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .license-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .license-info h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .license-info p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .badge-active {
+      background-color: var(--success-glow);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .badge-expired {
+      background-color: var(--danger-glow);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .key-display {
+      background-color: var(--bg-primary);
+      border: 1px dashed var(--border);
+      padding: 0.6rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #60a5fa;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.2rem;
+      border-radius: 4px;
+      transition: color 0.2s, background-color 0.2s;
+    }
+
+    .copy-btn:hover {
+      color: var(--text-main);
+      background-color: rgba(255,255,255,0.05);
+    }
+
+    .license-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 0.75rem;
+    }
+
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .detail-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+    .detail-val {
+      font-weight: 500;
+    }
+
+    .license-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 0.75rem;
+    }
+
+    .action-btn {
+      font-family: var(--font);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background-color: transparent;
+      color: var(--text-main);
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background-color: rgba(255,255,255,0.04);
+      border-color: var(--text-muted);
+    }
+
+    .action-btn-danger:hover {
+      background-color: var(--danger-glow);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .action-btn-success:hover {
+      background-color: var(--success-glow);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* Simulation card styling */
+    .sim-panel {
+      margin-top: 1.5rem;
+      background-color: #0d0f14;
+      border: 1px solid #1f2430;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .sim-output {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #34d399;
+      background-color: #05070a;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #111827;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .empty-icon {
+      font-size: 2.5rem;
+      opacity: 0.5;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">YP</div>
+      <div class="logo-title">YP Arena OS</div>
+      <div class="logo-badge">SaaS Admin Portal</div>
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-muted)">
+      Environment: <strong style="color: var(--success)">Central Cloud API</strong>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- Left Column: Generator & Simulation -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="card">
+        <h2 class="card-title">
+          <svg style="width: 1.25rem; height: 1.25rem; fill: var(--accent)" viewBox="0 0 24 24"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+          Issue License Key
+        </h2>
+        <form id="license-form">
+          <div class="form-group">
+            <label for="cafe-name">Café Name</label>
+            <input type="text" id="cafe-name" required placeholder="e.g. Phoenix eSports Cafe">
+          </div>
+          <div class="form-group">
+            <label for="owner-email">Owner Email</label>
+            <input type="email" id="owner-email" required placeholder="e.g. owner@phoenix.com">
+          </div>
+          <div class="form-group">
+            <label for="expiry-days">Subscription Duration</label>
+            <select id="expiry-days">
+              <option value="30">30 Days (Standard Monthly)</option>
+              <option value="90">90 Days (Quarterly License)</option>
+              <option value="365">365 Days (Annual Premium)</option>
+              <option value="1">1 Day (Short Trial/Demo)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn">Generate License Key</button>
+        </form>
+      </div>
+
+      <div class="card sim-panel">
+        <h4 style="font-size: 0.9rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: var(--success);"></span>
+          SaaS Validation Simulator
+        </h4>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+          Simulate how Edge Server validates its key via API payload:
+        </p>
+        <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+          <input type="text" id="sim-key-input" placeholder="Enter license key to test..." style="font-size: 0.8rem; padding: 0.5rem;">
+          <button id="sim-btn" class="btn btn-secondary" style="width: auto; padding: 0.5rem 1rem; font-size: 0.8rem;">Test API</button>
+        </div>
+        <div class="sim-output" id="sim-log">Console output idle...</div>
+      </div>
+    </div>
+
+    <!-- Right Column: Active Licenses -->
+    <div class="card">
+      <h2 class="card-title" style="justify-content: space-between; align-items: center;">
+        <span style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg style="width: 1.25rem; height: 1.25rem; fill: var(--success)" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Active Café Deployments
+        </span>
+        <button id="refresh-btn" class="action-btn" style="padding: 0.3rem 0.6rem;">Refresh List</button>
+      </h2>
+
+      <div id="license-list" class="license-grid">
+        <!-- Loaded dynamically -->
+        <div class="empty-state">
+          <div class="empty-icon">⏳</div>
+          <p>Fetching active cafe licenses...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 YP Arena OS B2B SaaS Enterprise. Confidential partner portal. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const API_URL = ''; // Relative since it's hosted by server.js
+
+    const licenseForm = document.getElementById('license-form');
+    const licenseList = document.getElementById('license-list');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const simKeyInput = document.getElementById('sim-key-input');
+    const simBtn = document.getElementById('sim-btn');
+    const simLog = document.getElementById('sim-log');
+
+    // Fetch and render licenses
+    async function loadLicenses() {
+      try {
+        const res = await fetch(`${API_URL}/api/licenses`);
+        const data = await res.json();
+        
+        if (data.length === 0) {
+          licenseList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📭</div>
+              <p>No active licenses found. Issue one on the left panel to begin.</p>
+            </div>
+          `;
+          return;
+        }
+
+        licenseList.innerHTML = data.map(license => {
+          const isActive = license.status === 'active';
+          const isExpired = license.status === 'expired';
+          
+          const statusBadge = isActive 
+            ? `<span class="badge badge-active">● Active</span>`
+            : `<span class="badge badge-expired">● ${license.status.toUpperCase()}</span>`;
+            
+          const hardwareText = license.hardwareId 
+            ? `<strong style="color: var(--success)">Locked: ${license.hardwareId.substring(0, 16)}...</strong>`
+            : `<span style="color: var(--warning)">Unlocked (Awaiting initial boot)</span>`;
+
+          const expiryDateStr = new Date(license.expiryDate).toLocaleDateString(undefined, { 
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+          });
+
+          return `
+            <div class="license-card" data-key="${license.key}">
+              <div class="license-header">
+                <div class="license-info">
+                  <h3>${escapeHtml(license.cafeName)}</h3>
+                  <p>${escapeHtml(license.ownerEmail)}</p>
+                </div>
+                ${statusBadge}
+              </div>
+
+              <div class="key-display">
+                <span>${license.key}</span>
+                <button class="copy-btn" onclick="copyToClipboard('${license.key}')" title="Copy Key">
+                  <svg style="width: 1rem; height: 1rem; fill: currentColor" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </button>
+              </div>
+
+              <div class="license-details">
+                <div class="detail-item">
+                  <span class="detail-label">Hardware Lock status</span>
+                  <span class="detail-val">${hardwareText}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Expiration Date</span>
+                  <span class="detail-val" style="${isExpired ? 'color: var(--danger); font-weight: bold;' : ''}">${expiryDateStr}</span>
+                </div>
+              </div>
+
+              <div class="license-actions">
+                <button class="action-btn ${isActive ? 'action-btn-danger' : 'action-btn-success'}" onclick="toggleStatus('${license.key}', '${license.status}')">
+                  Mark as ${isActive ? 'Expired' : 'Active'}
+                </button>
+                <button class="action-btn" onclick="resetHardware('${license.key}')" ${!license.hardwareId ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
+                  Reset HW Lock
+                </button>
+                <button class="action-btn" onclick="modifyExpiry('${license.key}')">
+                  Extend +30 Days
+                </button>
+                <button class="action-btn action-btn-danger" style="margin-left: auto;" onclick="deleteLicense('${license.key}')">
+                  Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        licenseList.innerHTML = `<div class="empty-state"><p style="color: var(--danger)">Failed to connect to Central API: ${err.message}</p></div>`;
+      }
+    }
+
+    // Escape HTML helper
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Toggle license active/expired
+    async function toggleStatus(key, currentStatus) {
+      const nextStatus = currentStatus === 'active' ? 'expired' : 'active';
+      try {
+        const res = await fetch(`${API_URL}/api/licenses/${key}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus })
+        });
+        if (res.ok) {
+          loadLicenses();
+          logSimulation(`Toggled status of ${key} to ${nextStatus}`);
+        }
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // Reset Hardware Lock
+    async function resetHardware(key) {
+      try {
+        const res = await fetch(`${API_URL}/api/licenses/${key}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resetHardware: true })
+        });
+        if (res.ok) {
+          loadLicenses();
+          alert('Hardware lock successfully reset! The license can now bind to a new machine on its next boot.');
+        }
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // Extend Expiry +30 days
+    async function modifyExpiry(key) {
+      try {
+        const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const res = await fetch(`${API_URL}/api/licenses/${key}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ expiryDate: newExpiry, status: 'active' }) // Reactive if expired
+        });
+        if (res.ok) {
+          loadLicenses();
+          logSimulation(`Extended license ${key} for 30 days.`);
+        }
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // Delete license
+    async function deleteLicense(key) {
+      if (!confirm(`Are you sure you want to permanently delete the license: ${key}?`)) return;
+      try {
+        const res = await fetch(`${API_URL}/api/licenses/${key}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          loadLicenses();
+          logSimulation(`Deleted license ${key}`);
+        }
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+
+    // Form submit
+    licenseForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cafeName = document.getElementById('cafe-name').value.trim();
+      const ownerEmail = document.getElementById('owner-email').value.trim();
+      const expiryDays = document.getElementById('expiry-days').value;
+
+      try {
+        const res = await fetch(`${API_URL}/api/licenses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cafeName, ownerEmail, expiryDays })
+        });
+        
+        if (res.ok) {
+          document.getElementById('cafe-name').value = '';
+          document.getElementById('owner-email').value = '';
+          const data = await res.json();
+          simKeyInput.value = data.key; // auto-populate simulator
+          loadLicenses();
+          logSimulation(`Created license successfully:\n${JSON.stringify(data, null, 2)}`);
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to generate');
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // Copy to clipboard
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('License key copied to clipboard!');
+      }).catch(err => {
+        alert('Could not copy text: ', err);
+      });
+    }
+
+    // Logging helper
+    function logSimulation(msg) {
+      simLog.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    }
+
+    // Test API Simulator
+    simBtn.addEventListener('click', async () => {
+      const licenseKey = simKeyInput.value.trim();
+      if (!licenseKey) {
+        logSimulation('Error: Please enter a key in the simulator input.');
+        return;
+      }
+
+      logSimulation(`Pinging SaaS Central Server /api/licenses/validate for:\nKey: ${licenseKey}...`);
+      try {
+        const res = await fetch(`${API_URL}/api/licenses/validate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ licenseKey, hardwareId: 'MOCK-MACHINE-MAC-45:32:FF:11' })
+        });
+        const data = await res.json();
+        logSimulation(`API RESPONSE:\nStatus Code: ${res.status}\nBody: ${JSON.stringify(data, null, 2)}`);
+        loadLicenses(); // Refresh to see hardware binding if occurred
+      } catch (err) {
+        logSimulation(`API ERROR: ${err.message}`);
+      }
+    });
+
+    // Initial Load
+    loadLicenses();
+    refreshBtn.addEventListener('click', loadLicenses);
+  </script>
+</body>
+</html>

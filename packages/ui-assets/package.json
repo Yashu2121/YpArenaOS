@@ -1,0 +1,9 @@
+{
+  "name": "yp-arena-os-ui-assets",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "exports": {
+    "./bg.png": "./bg.png"
+  }
+}

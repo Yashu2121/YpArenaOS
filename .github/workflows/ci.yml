@@ -1,0 +1,50 @@
+name: YpArenas CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          edge-server/package-lock.json
+          pc-client/package-lock.json
+
+    - name: Install Backend Dependencies
+      working-directory: ./backend
+      run: npm install
+
+    - name: Install Edge Server Dependencies
+      working-directory: ./edge-server
+      run: npm install
+
+    - name: Install PC Client Dependencies
+      working-directory: ./pc-client
+      run: npm install
+
+    # Add testing commands here when tests are written
+    # - name: Run Backend Tests
+    #   working-directory: ./backend
+    #   run: npm test
+
+    # - name: Run Edge Server Tests
+    #   working-directory: ./edge-server
+    #   run: npm test

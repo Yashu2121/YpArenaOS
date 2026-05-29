@@ -1,0 +1,59 @@
+{
+  "name": "backend-gui",
+  "private": true,
+  "version": "0.0.0",
+  "description": "YpArenaos Server Engine",
+  "author": "YpArenaos",
+  "type": "module",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "electron:start": "electron .",
+    "electron:build": "vite build && electron-builder"
+  },
+  "build": {
+    "appId": "com.yparenaos.server",
+    "productName": "YpArenaos Server",
+    "win": {
+      "target": "nsis"
+    },
+    "directories": {
+      "output": "release-builds"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs"
+    ]
+  },
+  "dependencies": {
+    "autoprefixer": "^10.5.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.16.0",
+    "node-machine-id": "^1.1.12",
+    "postcss": "^8.5.15",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "javascript-obfuscator": "^5.4.3",
+    "vite": "^8.0.12",
+    "vite-plugin-javascript-obfuscator": "^3.1.0"
+  }
+}
