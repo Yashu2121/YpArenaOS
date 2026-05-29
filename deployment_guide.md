@@ -64,12 +64,71 @@ Instead of installing games (like 100GB of GTA V or 60GB of Warzone) on every si
 
 ---
 
-## Your Launch Checklist
+---
 
-- [ ] Sign a lease for a commercial space.
-- [ ] Buy Master Server & Network Switch.
-- [ ] Buy Gaming PCs & Desks.
-- [ ] Install PostgreSQL & Edge Server on Master Server.
-- [ ] Install PC Client Kiosk on all Gaming PCs and set to run on boot.
-- [ ] Launch Admin Dashboard at the front desk.
-- [ ] Open the doors!
+## 4. SaaS Enterprise Cloud Deployment (AWS EC2 & Vercel)
+
+To run YP Arena OS as a B2B SaaS business, you must host your marketing portal, user signups, and licensing engine in the cloud.
+
+### A. Deploying the Central SaaS API Server to AWS EC2
+1. **Launch EC2 Instance:** Set up an **Ubuntu 22.04 LTS** instance (t3.micro or t3.small is sufficient to start).
+2. **Configure Security Group:** Allow inbound ports:
+   - `22` (SSH)
+   - `80` (HTTP)
+   - `443` (HTTPS)
+3. **Associate Elastic IP:** Bind a static IP to the instance so it doesn't change on reboot.
+4. **Deploy Node Server:** SSH into the instance, clone your repository, navigate to `apps/saas-central-server`, and install dependencies:
+   ```bash
+   npm install
+   ```
+5. **Keep Process Active:** Install `pm2` globally to manage the Node server:
+   ```bash
+   sudo npm install -pm2 -g
+   pm2 start server.js --name yp-saas-server
+   pm2 save
+   pm2 startup
+   ```
+6. **Nginx Reverse Proxy & SSL Setup:**
+   - Install Nginx: `sudo apt install nginx`
+   - Configure Nginx to forward port 80/443 traffic to `http://localhost:5000`.
+   - Install certbot for free SSL:
+     ```bash
+     sudo apt install certbot python3-certbot-nginx
+     sudo certbot --nginx -d api.yparenaos.com
+     ```
+   - Now, your Edge Servers can securely validate license keys via `https://api.yparenaos.com/api/licenses/validate`.
+
+### B. Deploying the Landing Page to Vercel
+1. **Connect GitHub:** Sign up on Vercel and connect your GitHub repository.
+2. **Project Configuration:**
+   - Select the `YpArenaOS` repository.
+   - Set the framework preset to **Vite** (or Next.js if you choose).
+   - Set the Root Directory to `apps/landing-page`.
+3. **Configure Environment Variables:** Add `VITE_SAAS_API_URL` under project settings and set it to your AWS EC2 subdomain: `https://api.yparenaos.com`.
+4. **Deploy:** Click **Deploy**. Vercel will build the React site, provision an SSL certificate, and serve it on a global CDN.
+5. **Custom Domain:** Add your root domain `yparenaos.com` in Vercel settings and point your DNS CNAME/A records to Vercel.
+
+### C. Hosting Large Installers on Amazon S3
+1. **Create Bucket:** Create an Amazon S3 Bucket named `yparenaos-dist` with block-all-public-access disabled.
+2. **Upload Executables:** Compile your NSIS installer (`YP-Arena-OS-Unified-Installer.exe`) and upload it to the bucket root.
+3. **Set Permissions:** Enable public read access for the uploaded file so owners can download it.
+4. **Link in UI:** Use the S3 link (e.g. `https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Unified-Installer.exe`) as the target for the download buttons on your Vercel landing page.
+
+---
+
+## Your Launch Checklists
+
+### B2B SaaS Company Launch Checklist (You)
+- [x] Register domain name (e.g. `yparenaos.com`).
+- [ ] Deploy Central SaaS Server on AWS EC2 (`api.yparenaos.com`).
+- [ ] Connect SSL certificate using Let's Encrypt Certbot on Nginx.
+- [ ] Deploy Marketing Landing Page on Vercel connected to the EC2 API URL.
+- [ ] Upload compiled NSIS installers to Amazon S3.
+- [ ] Configure Stripe payments on SaaS Server for automatic subscription billing.
+
+### Individual Café Onboarding Checklist (Your Customer)
+- [ ] Customer subscribes on `yparenaos.com` and receives a License Key.
+- [ ] Customer downloads the Unified Installer.
+- [ ] Customer runs the installer on their local Master Server, enters their License Key, and registers their client PCs.
+- [ ] The local Edge Server connects to your AWS EC2 Central Server to activate and runs in active mode.
+
