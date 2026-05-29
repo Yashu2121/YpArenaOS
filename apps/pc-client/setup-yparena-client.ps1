@@ -29,7 +29,7 @@ $ruleUdpName = "YP Arena OS Client Auto-Discovery (UDP)"
 Remove-NetFirewallRule -DisplayName $ruleUdpName -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName $ruleUdpName -Direction Inbound -Action Allow -Protocol UDP -LocalPort 41234 | Out-Null
 
-Write-Host "✅ Inbound firewall rule added to allow UDP broadcast listeners on Port 41234." -ForegroundColor Clean
+Write-Host "[OK] Inbound firewall rule added to allow UDP broadcast listeners on Port 41234." -ForegroundColor Clean
 Write-Host ""
 
 # ------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ npm start
 "@
 
 Set-Content -Path "run-pc-client.bat" -Value $batContent -Encoding utf8
-Write-Host "✅ Created run-pc-client.bat launcher." -ForegroundColor Clean
+Write-Host "[OK] Created run-pc-client.bat launcher." -ForegroundColor Clean
 
 # Create Windows Startup folder shortcut
 $startupFolder = [System.IO.Path]::Combine($env:APPDATA, "Microsoft\Windows\Start Menu\Programs\Startup")
@@ -75,7 +75,7 @@ try {
     $shortcut.WorkingDirectory = (Get-Location).Path
     $shortcut.Description = "Auto-launch YP Arena OS Secure Kiosk Client on boot"
     $shortcut.Save()
-    Write-Host "✅ Registered Kiosk auto-launch shortcut in Windows Startup folder." -ForegroundColor Clean
+    Write-Host "[OK] Registered Kiosk auto-launch shortcut in Windows Startup folder." -ForegroundColor Clean
 } catch {
     Write-Host "WARNING: Failed to register Windows Startup shortcut. Please copy run-pc-client.bat to shell:startup manually." -ForegroundColor Yellow
 }

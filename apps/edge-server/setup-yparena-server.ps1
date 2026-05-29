@@ -110,14 +110,14 @@ if ($dbCheck -ne "1") {
     Write-Host "Database '$dbName' does not exist. Creating database..." -ForegroundColor Yellow
     & $psqlPath -h $dbHost -p $dbPort -U $dbUser -d postgres -c "CREATE DATABASE $dbName;" 2>&1
 } else {
-    Write-Host "✅ Database '$dbName' already exists." -ForegroundColor Clean
+    Write-Host "[OK] Database '$dbName' already exists." -ForegroundColor Clean
 }
 
 # Run Schema migrations
 Write-Host "Running database migrations on '$dbName' from schema.sql..." -ForegroundColor Yellow
 if (Test-Path "schema.sql") {
     & $psqlPath -h $dbHost -p $dbPort -U $dbUser -d $dbName -f "schema.sql" 2>&1
-    Write-Host "✅ Database schema loaded successfully." -ForegroundColor Clean
+    Write-Host "[OK] Database schema loaded successfully." -ForegroundColor Clean
 } else {
     Write-Host "WARNING: schema.sql was not found in the current directory. Skipping database schema import." -ForegroundColor Yellow
 }
@@ -142,11 +142,11 @@ SAAS_SERVER_URL=$saasUrl
 "@
 
 Set-Content -Path ".env" -Value $envContent -Encoding utf8
-Write-Host "✅ Generated local configuration file: apps/edge-server/.env" -ForegroundColor Clean
+Write-Host "[OK] Generated local configuration file: apps/edge-server/.env" -ForegroundColor Clean
 
 # Generate license.key
 Set-Content -Path "license.key" -Value $licenseKey -Encoding utf8
-Write-Host "✅ Generated license file: apps/edge-server/license.key" -ForegroundColor Clean
+Write-Host "[OK] Generated license file: apps/edge-server/license.key" -ForegroundColor Clean
 
 Write-Host ""
 
@@ -159,13 +159,13 @@ Write-Host "[5/6] Auto-configuring Windows Defender Firewall rules..." -Foregrou
 $ruleTcpName = "YP Arena OS Edge Server (TCP)"
 Remove-NetFirewallRule -DisplayName $ruleTcpName -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName $ruleTcpName -Direction Inbound -Action Allow -Protocol TCP -LocalPort $edgePort | Out-Null
-Write-Host "✅ Inbound TCP Rule added for Local Server communication (Port $edgePort)" -ForegroundColor Clean
+Write-Host "[OK] Inbound TCP Rule added for Local Server communication (Port $edgePort)" -ForegroundColor Clean
 
 # Open UDP Discovery Port
 $ruleUdpName = "YP Arena OS Auto-Discovery (UDP)"
 Remove-NetFirewallRule -DisplayName $ruleUdpName -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName $ruleUdpName -Direction Inbound -Action Allow -Protocol UDP -LocalPort 41234 | Out-Null
-Write-Host "✅ Inbound UDP Rule added for terminal auto-discovery beacon (Port 41234)" -ForegroundColor Clean
+Write-Host "[OK] Inbound UDP Rule added for terminal auto-discovery beacon (Port 41234)" -ForegroundColor Clean
 
 Write-Host ""
 
@@ -185,7 +185,7 @@ pause
 "@
 
 Set-Content -Path "run-edge-server.bat" -Value $batContent -Encoding utf8
-Write-Host "✅ Created run-edge-server.bat launcher." -ForegroundColor Clean
+Write-Host "[OK] Created run-edge-server.bat launcher." -ForegroundColor Clean
 
 # Create Windows Startup folder shortcut
 $startupFolder = [System.IO.Path]::Combine($env:APPDATA, "Microsoft\Windows\Start Menu\Programs\Startup")
@@ -198,7 +198,7 @@ try {
     $shortcut.WorkingDirectory = (Get-Location).Path
     $shortcut.Description = "Auto-launch YP Arena OS local Master Edge Server on startup"
     $shortcut.Save()
-    Write-Host "✅ Added Edge Server auto-launch shortcut to Windows Startup folder." -ForegroundColor Clean
+    Write-Host "[OK] Added Edge Server auto-launch shortcut to Windows Startup folder." -ForegroundColor Clean
 } catch {
     Write-Host "WARNING: Failed to register Windows Startup shortcut. Please add run-edge-server.bat to startup manually." -ForegroundColor Yellow
 }

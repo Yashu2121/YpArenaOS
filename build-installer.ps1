@@ -55,7 +55,7 @@ if (-not $nsisPath) {
     Exit
 }
 
-Write-Host "✅ NSIS compiler detected at: $nsisPath" -ForegroundColor Green
+Write-Host "[OK] NSIS compiler detected at: $nsisPath" -ForegroundColor Green
 Write-Host ""
 
 # ------------------------------------------------------------------------------
@@ -64,18 +64,18 @@ Write-Host ""
 Write-Host "[2/3] Compiling and packaging sub-applications..." -ForegroundColor Green
 
 # A. Build Server Engine
-Write-Host "🔨 Building Server Engine..." -ForegroundColor Yellow
+Write-Host "[BUILD] Building Server Engine..." -ForegroundColor Yellow
 npm run electron:build --workspace=apps/server-engine
 
 # B. Build Admin Dashboard
-Write-Host "🔨 Building Admin Dashboard..." -ForegroundColor Yellow
+Write-Host "[BUILD] Building Admin Dashboard..." -ForegroundColor Yellow
 npm run build:electron --workspace=apps/admin-dashboard
 
 # C. Build PC Client
-Write-Host "🔨 Building PC Client Kiosk..." -ForegroundColor Yellow
+Write-Host "[BUILD] Building PC Client Kiosk..." -ForegroundColor Yellow
 npm run pack --workspace=apps/pc-client
 
-Write-Host "✅ All applications successfully compiled into unpacked directories." -ForegroundColor Green
+Write-Host "[OK] All applications successfully compiled into unpacked directories." -ForegroundColor Green
 Write-Host ""
 
 # ------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ if (Test-Path $installerFile) {
     Write-Host "             COMPILATION SUCCESSFUL!" -ForegroundColor Green
     Write-Host "=======================================================================" -ForegroundColor Green
     Write-Host "Unified Installer generated at:" -ForegroundColor Gray
-    Write-Host "👉 $(Resolve-Path $installerFile)" -ForegroundColor Green
+    Write-Host "Path: $(Resolve-Path $installerFile)" -ForegroundColor Green
 } else {
     Write-Error "ERROR: Compilation finished but the installer executable was not found."
 }
