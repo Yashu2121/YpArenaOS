@@ -5,6 +5,45 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const { spawn } = require('child_process');
+const fs = require('fs');
+
+let edgeServerProcess = null;
+
+function startEdgeServer() {
+  if (edgeServerProcess) return;
+  
+  // Find the edge-server executable path
+  let exePath;
+  if (app.isPackaged) {
+    // In production, it's next to the main executable
+    exePath = path.join(path.dirname(app.getPath('exe')), 'edge-server.exe');
+  } else {
+    // In development, it's in the edge-server folder
+    exePath = path.join(__dirname, '..', 'edge-server', 'edge-server.exe');
+  }
+
+  if (fs.existsSync(exePath)) {
+    console.log(`[CORE] Launching Edge Server from: ${exePath}`);
+    edgeServerProcess = spawn(exePath, [], {
+      detached: false,
+      stdio: 'ignore', // Hide the console window
+      windowsHide: true
+    });
+    
+    edgeServerProcess.on('error', (err) => {
+      console.error('[CORE] Failed to start Edge Server:', err);
+    });
+    
+    edgeServerProcess.on('exit', (code) => {
+      console.log(`[CORE] Edge Server exited with code ${code}`);
+      edgeServerProcess = null;
+    });
+  } else {
+    console.error(`[CORE] Edge Server executable not found at: ${exePath}`);
+  }
+}
+
 
 // Constants
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_yparenaos';
@@ -51,6 +90,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  startEdgeServer();
   createWindow();
 
   app.on('activate', function () {
@@ -89,5 +129,12 @@ ipcMain.handle('get-connected-clients', () => {
 });
 
 app.on('window-all-closed', function () {
+  if (edgeServerProcess) {
+    try {
+      process.kill(edgeServerProcess.pid, 'SIGTERM');
+    } catch (e) {
+      // Ignore errors if process already exited
+    }
+  }
   if (process.platform !== 'darwin') app.quit();
 });

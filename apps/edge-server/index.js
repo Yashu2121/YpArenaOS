@@ -11,28 +11,41 @@ const WebSocket  = require('ws');
 const cors       = require('cors');
 const bcrypt     = require('bcryptjs');
 const jwt        = require('jsonwebtoken');
-const { Pool }   = require('pg');
+const { PGlite } = require('@electric-sql/pglite');
 const fs         = require('fs');
 const path       = require('path');
+const os         = require('os');
 
 // ============================================================
-// DATABASE SETUP
+// DATABASE SETUP (Zero-Config Embedded)
 // ============================================================
-const db = new Pool({
-  host:     process.env.DB_HOST     || 'localhost',
-  port:     parseInt(process.env.DB_PORT) || 5432,
-  database: process.env.DB_NAME     || 'yparenaos',
-  user:     process.env.DB_USER     || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
-});
+const appDataFolder = process.env.APPDATA || (process.platform === 'darwin' ? process.env.HOME + '/Library/Application Support' : process.env.HOME + '/.local/share');
+const dataDir = path.join(appDataFolder, 'YpArenaOS');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+const dbPath = path.join(dataDir, 'yparenaos-db');
+const db = new PGlite(dbPath);
+
+// Add a connect method wrapper for backwards compatibility
+db.connect = async () => true;
 
 // Run schema on startup
 async function initDb() {
   try {
-    await db.connect();
-    console.log('[DB] Connected to PostgreSQL');
-    const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
-    await db.query(schema);
+    console.log('[DB] Connecting to Embedded PostgreSQL (PGLite)');
+    
+    let schemaStr = '';
+    // Handle pkg virtual filesystem for reading the schema file
+    if (process.pkg) {
+      schemaStr = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
+    } else {
+      schemaStr = fs.readFileSync(path.join(process.cwd(), 'schema.sql'), 'utf-8');
+    }
+
+    // PGLite handles the full postgres schema flawlessly
+    await db.query(schemaStr);
+    console.log('[DB] Database embedded locally at:', dbPath);
     console.log('[DB] Schema initialized successfully');
   } catch (err) {
     console.error('[DB] Connection failed:', err.message);
@@ -246,6 +259,21 @@ app.post('/api/license/activate', async (req, res) => {
 });
 const PORT   = parseInt(process.env.PORT) || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'yparenaos_dev_secret';
+const DEFAULT_GAMEZONE_ID = 'b0000000-0000-0000-0000-000000000001';
+const DEMO_ADMIN_EMAIL = process.env.DEMO_ADMIN_EMAIL || 'owner@yparenaos.com';
+const DEMO_ADMIN_PASSWORD = process.env.DEMO_ADMIN_PASSWORD || 'admin123';
+
+function createDemoAdminToken(email = DEMO_ADMIN_EMAIL) {
+  return jwt.sign(
+    { user_id: 'demo-owner-001', role: 'owner', email, name: 'Demo Owner' },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+}
+
+function isDemoAdminLogin(email, password) {
+  return email === DEMO_ADMIN_EMAIL && password === DEMO_ADMIN_PASSWORD;
+}
 
 // ============================================================
 // WEBSOCKET SETUP
@@ -269,22 +297,62 @@ wss.on('connection', (ws, req) => {
       const msg = JSON.parse(raw);
 
       if (msg.type === 'REGISTER_PC') {
-        connectedClients.set(msg.pcId, ws);
-        ws.pcId = msg.pcId;
-        console.log(`[WS] PC Registered: ${msg.pcId}`);
+        const stationName = msg.stationName || msg.pcId || 'PC-UNKNOWN';
+        const gamezoneId = msg.gamezoneId || DEFAULT_GAMEZONE_ID;
+        let clientId = msg.clientId;
 
-        // Update device status to online
         try {
-          await db.query(
-            `UPDATE clients SET status='online', last_seen=NOW() WHERE client_id=$1`,
-            [msg.pcId]
+          const existing = await db.query(
+            `SELECT client_id FROM clients WHERE gamezone_id=$1 AND name=$2 LIMIT 1`,
+            [gamezoneId, stationName]
           );
-        } catch (e) { /* db might not be available */ }
 
-        broadcast('DEVICE_STATUS_UPDATE', { pcId: msg.pcId, status: 'online' });
+          if (existing.rows.length) {
+            clientId = existing.rows[0].client_id;
+            await db.query(
+              `UPDATE clients SET status='online', ip_address=$1, last_seen=NOW() WHERE client_id=$2`,
+              [ip, clientId]
+            );
+          } else {
+            const inserted = await db.query(
+              `INSERT INTO clients (gamezone_id, name, device_type, status, ip_address, hourly_rate, specs, last_seen)
+               VALUES ($1, $2, 'PC', 'online', $3, 60.00, $4, NOW()) RETURNING client_id`,
+              [gamezoneId, stationName, ip, JSON.stringify({ source: 'auto_registered' })]
+            );
+            clientId = inserted.rows[0].client_id;
+          }
+        } catch (e) {
+          let mock = currentMockDevices.find(d => d.name === stationName);
+          if (!mock) {
+            mock = {
+              client_id: crypto.randomUUID(),
+              gamezone_id: gamezoneId,
+              name: stationName,
+              device_type: 'PC',
+              status: 'online',
+              ip_address: ip,
+              specs: { source: 'auto_registered' },
+              hourly_rate: 60
+            };
+            currentMockDevices.push(mock);
+          } else {
+            mock.status = 'online';
+            mock.ip_address = ip;
+          }
+          clientId = mock.client_id;
+        }
+
+        connectedClients.set(clientId, ws);
+        ws.pcId = clientId;
+        ws.stationName = stationName;
+        console.log(`[WS] PC Registered: ${stationName} (${clientId})`);
+
+        broadcast('DEVICE_STATUS_UPDATE', { pcId: clientId, stationName, status: 'online' });
 
         ws.send(JSON.stringify({
           type: 'REGISTERED',
+          clientId,
+          stationName,
           message: 'PC registered successfully',
           status: 'UP_TO_DATE'
         }));
@@ -374,6 +442,14 @@ app.post('/auth/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   try {
+    if (isDemoAdminLogin(email, password)) {
+      return res.json({
+        token: createDemoAdminToken(email),
+        user: { user_id: 'demo-owner-001', name: 'Demo Owner', email, role: 'owner' },
+        demo: true
+      });
+    }
+
     const result = await db.query('SELECT * FROM users WHERE email=$1 AND is_active=TRUE', [email]);
     const user = result.rows[0];
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
@@ -391,8 +467,11 @@ app.post('/auth/login', async (req, res) => {
       user: { user_id: user.user_id, name: user.name, email: user.email, role: user.role, phone: user.phone }
     });
   } catch (err) {
+    if (!isDemoAdminLogin(email, password)) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
     // MOCK response when DB not available
-    const mockToken = jwt.sign({ user_id: 'mock-001', role: 'owner', email, name: 'Demo User' }, JWT_SECRET, { expiresIn: '24h' });
+    const mockToken = createDemoAdminToken(email);
     res.json({ token: mockToken, user: { user_id: 'mock-001', name: 'Demo User', email, role: 'owner' }, mock: true });
   }
 });
@@ -620,7 +699,7 @@ app.get('/clients', async (req, res) => {
 
 // POST /clients — Add new client device
 app.post('/clients', async (req, res) => {
-  const { name, device_type, hourly_rate, ip_address, specs, gamezone_id = 'b0000000-0000-0000-0000-000000000001' } = req.body;
+  const { name, device_type, hourly_rate, ip_address, specs, gamezone_id = DEFAULT_GAMEZONE_ID } = req.body;
   if (!name || !device_type) {
     return res.status(400).json({ error: 'name and device_type are required' });
   }
@@ -707,7 +786,8 @@ app.get('/sessions/active', async (req, res) => {
     `);
     res.json({ sessions: result.rows, count: result.rowCount });
   } catch (err) {
-    res.json({ sessions: [], count: 0, mock: true });
+    const activeSessions = currentMockSessions.filter(s => s.status === 'active');
+    res.json({ sessions: activeSessions, count: activeSessions.length, mock: true });
   }
 });
 
@@ -736,7 +816,34 @@ app.post('/sessions/start', requireAuth(['owner', 'staff']), async (req, res) =>
 
     res.status(201).json({ session: session.rows[0] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const device = currentMockDevices.find(d => d.client_id === client_id);
+    if (!device) return res.status(404).json({ error: 'Client not found' });
+
+    device.status = 'in_use';
+    const session = {
+      session_id: crypto.randomUUID(),
+      client_id,
+      customer_id: customer_id || null,
+      gamezone_id,
+      start_time: new Date().toISOString(),
+      end_time: null,
+      duration_minutes: null,
+      amount: 0,
+      payment_method,
+      payment_status: 'pending',
+      status: 'active',
+      device_name: device.name,
+      customer_name: customer_id ? 'Demo Customer' : 'Walk-in'
+    };
+    currentMockSessions.push(session);
+
+    broadcast('SESSION_STARTED', { session, client_id, customer_id });
+    broadcast('DEVICE_STATUS_UPDATE', { pcId: client_id, status: 'in_use' });
+
+    const ws = connectedClients.get(client_id);
+    if (ws) ws.send(JSON.stringify({ type: 'SESSION_START', session }));
+
+    res.status(201).json({ session, mock: true });
   }
 });
 
@@ -785,7 +892,30 @@ app.post('/sessions/:id/stop', requireAuth(['owner', 'staff']), async (req, res)
 
     res.json({ session: updated.rows[0], duration_minutes: durationMinutes, amount: cost.toFixed(2) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const session = currentMockSessions.find(s => s.session_id === id);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    const device = currentMockDevices.find(d => d.client_id === session.client_id);
+    const endTime = new Date();
+    const startTime = new Date(session.start_time);
+    const durationMinutes = Math.max(1, Math.ceil((endTime - startTime) / 60000));
+    const hourlyRate = device?.hourly_rate || 40;
+    const cost = (durationMinutes / 60) * hourlyRate;
+
+    session.status = 'completed';
+    session.end_time = endTime.toISOString();
+    session.duration_minutes = durationMinutes;
+    session.amount = Number(cost.toFixed(2));
+    session.payment_status = 'paid';
+    if (device) device.status = 'online';
+
+    broadcast('SESSION_ENDED', { session, client_id: session.client_id });
+    broadcast('DEVICE_STATUS_UPDATE', { pcId: session.client_id, status: 'online' });
+
+    const ws = connectedClients.get(session.client_id);
+    if (ws) ws.send(JSON.stringify({ type: 'SESSION_END', session }));
+
+    res.json({ session, duration_minutes: durationMinutes, amount: cost.toFixed(2), mock: true });
   }
 });
 
@@ -825,11 +955,27 @@ app.get('/stats', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    // Mock stats when DB not available
+    const completedToday = currentMockSessions.filter(s =>
+      s.status === 'completed' && s.end_time && new Date(s.end_time).toDateString() === new Date().toDateString()
+    );
+    const deviceMap = currentMockDevices.reduce((acc, d) => {
+      acc[d.status] = (acc[d.status] || 0) + 1;
+      return acc;
+    }, {});
+
     res.json({
-      devices: { total: 8, online: 5, in_use: 2, offline: 1, maintenance: 0 },
-      active_sessions: 2,
-      today: { revenue: 24530, hours: 48.5 },
+      devices: {
+        total: currentMockDevices.length,
+        online: deviceMap.online || 0,
+        in_use: deviceMap.in_use || 0,
+        offline: deviceMap.offline || 0,
+        maintenance: deviceMap.maintenance || 0
+      },
+      active_sessions: currentMockSessions.filter(s => s.status === 'active').length,
+      today: {
+        revenue: completedToday.reduce((sum, s) => sum + Number(s.amount || 0), 0),
+        hours: Math.round(completedToday.reduce((sum, s) => sum + Number(s.duration_minutes || 0), 0) / 60 * 10) / 10
+      },
       total_customers: 147,
       mock: true
     });
@@ -943,7 +1089,7 @@ app.post('/pos', async (req, res) => {
 });
 
 // POST /pos/order — Place an order
-app.post('/pos/order', requireAuth(['owner', 'staff', 'customer']), async (req, res) => {
+app.post('/pos/order', async (req, res) => {
   const { pos_id, user_id, gamezone_id, session_id, quantity = 1 } = req.body;
   try {
     const itemRes = await db.query('SELECT * FROM pos_items WHERE pos_id=$1', [pos_id]);
@@ -969,7 +1115,30 @@ app.post('/pos/order', requireAuth(['owner', 'staff', 'customer']), async (req, 
 
     res.status(201).json({ order: finalOrder, item: item.item_name, total });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const item = currentMockPosItems.find(p => p.pos_id === pos_id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    if (item.stock < quantity) return res.status(400).json({ error: 'Insufficient stock' });
+
+    const total = item.price * quantity;
+    item.stock -= quantity;
+
+    const order = {
+      order_id: crypto.randomUUID(),
+      pos_id,
+      user_id: user_id || null,
+      gamezone_id: gamezone_id || DEFAULT_GAMEZONE_ID,
+      session_id: session_id || null,
+      quantity,
+      unit_price: item.price,
+      total_amount: total,
+      payment_method: 'wallet',
+      status: 'completed',
+      timestamp: new Date().toISOString()
+    };
+    currentMockOrders.unshift({ ...order, item_name: item.item_name, category: item.category });
+
+    broadcast('NEW_ORDER', { order, item: item.item_name, quantity, total });
+    res.status(201).json({ order, item: item.item_name, total, mock: true });
   }
 });
 
@@ -988,7 +1157,7 @@ app.get('/pos/orders', requireAuth(['owner', 'staff']), async (req, res) => {
     );
     res.json({ orders: result.rows });
   } catch (err) {
-    res.json({ orders: [], mock: true });
+    res.json({ orders: currentMockOrders.slice(0, Number(limit)), mock: true });
   }
 });
 
@@ -1109,6 +1278,9 @@ let currentMockDevices = [
   { client_id: 'd6', name: 'PC-05', device_type: 'PC', status: 'in_use', ip_address: '192.168.1.105', specs: { gpu: 'RTX 4080', ram: '32GB' }, hourly_rate: 80 },
   { client_id: 'd7', name: 'PC-06', device_type: 'PC', status: 'maintenance', ip_address: '192.168.1.106', specs: { gpu: 'RTX 3070', ram: '16GB' }, hourly_rate: 50 },
 ];
+
+let currentMockSessions = [];
+let currentMockOrders = [];
 
 function mockDevices() {
   return currentMockDevices;
@@ -1290,9 +1462,25 @@ app.get('/reports/revenue', requireAuth(['owner']), async (req, res) => {
     }), { sessions: 0, revenue: 0 });
     res.json({ report: result.rows, totals });
   } catch (err) {
+    const rowsByDate = currentMockSessions
+      .filter(s => s.status === 'completed' && s.end_time)
+      .reduce((acc, s) => {
+        const date = s.end_time.split('T')[0];
+        if (!acc[date]) acc[date] = { date, sessions: 0, revenue: 0, total_minutes: 0 };
+        acc[date].sessions += 1;
+        acc[date].revenue += Number(s.amount || 0);
+        acc[date].total_minutes += Number(s.duration_minutes || 0);
+        return acc;
+      }, {});
+    const report = Object.values(rowsByDate).sort((a, b) => b.date.localeCompare(a.date));
+    const totals = report.reduce((acc, r) => ({
+      sessions: acc.sessions + r.sessions,
+      revenue: acc.revenue + r.revenue,
+    }), { sessions: 0, revenue: 0 });
+
     res.json({
-      report: mockRevenueReport(),
-      totals: { sessions: 342, revenue: 124530 },
+      report,
+      totals,
       mock: true
     });
   }

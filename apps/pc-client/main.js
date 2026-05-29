@@ -2,6 +2,7 @@ const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const path = require('path');
 const dgram = require('dgram');
 const fs = require('fs');
+const os = require('os');
 const watchdog = require('./watchdog');
 const launcher = require('./launcher');
 
@@ -121,6 +122,10 @@ app.whenReady().then(() => {
     saveCachedServerUrl(url);
     discoveredServerUrl = url;
     event.reply('server-url-saved', true);
+  });
+
+  ipcMain.on('get-station-id', (event) => {
+    event.returnValue = os.hostname() || 'PC-UNKNOWN';
   });
 
   // Admin Override to unlock PC (Ctrl + Alt + L)

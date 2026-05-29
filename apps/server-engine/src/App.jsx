@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, Server, Users, Activity, Lock, Unlock, Cpu, HardDrive, Wifi, Radio, Zap } from 'lucide-react';
+import { ShieldAlert, Server, Activity, Lock, Unlock, Wifi, Radio, Zap } from 'lucide-react';
 
 const API = 'http://localhost:4000';
 const WS_URL = 'ws://localhost:4000';
@@ -26,7 +26,7 @@ function App() {
       const { ipcRenderer } = window.require('electron');
       ipcRenderer.invoke('get-hardware-id').then(setHardwareId);
     } else {
-      setHardwareId('HWID-0x9F3B2A');
+      setTimeout(() => setHardwareId('HWID-0x9F3B2A'), 0);
     }
   }, []);
 
@@ -48,7 +48,7 @@ function App() {
       };
       ws.onclose = () => { setWsStatus('offline'); setTimeout(connectWs, 3000); };
       ws.onerror = () => setWsStatus('error');
-    } catch (e) { setWsStatus('error'); }
+    } catch { setWsStatus('error'); }
   }
 
   async function fetchStats() {
@@ -56,7 +56,7 @@ function App() {
       const r = await fetch(`${API}/stats?gamezone_id=b0000000-0000-0000-0000-000000000001`);
       const data = await r.json();
       setStats(data);
-    } catch (e) { console.error('fetchStats error'); }
+    } catch { console.error('fetchStats error'); }
   }
 
   // ─── HANDLERS ───────────────────────────────────
@@ -70,7 +70,7 @@ function App() {
       } else {
         throw new Error('Server not ready');
       }
-    } catch (e) {
+    } catch {
       setIsConnecting(false);
       alert('Edge Server is offline. Please run it first.');
     }
@@ -97,7 +97,7 @@ function App() {
       } else {
         alert('Login failed: ' + data.error);
       }
-    } catch (err) {
+    } catch {
       alert('Network error communicating with Edge Server.');
     }
   };
@@ -113,7 +113,7 @@ function App() {
         body: JSON.stringify({ message: msg, type: 'warning' })
       });
       if (r.ok) alert('Message broadcast sent!');
-    } catch (e) { alert('Failed to send broadcast'); }
+    } catch { alert('Failed to send broadcast'); }
   };
 
   const handleLockAll = async () => {
@@ -125,7 +125,7 @@ function App() {
         body: JSON.stringify({ reason: 'Emergency Lock' })
       });
       if (r.ok) alert('All PCs locked.');
-    } catch (e) { alert('Failed to lock PCs'); }
+    } catch { alert('Failed to lock PCs'); }
   };
 
   /* ===== PRE-DASHBOARD SCREENS ===== */

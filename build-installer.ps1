@@ -7,7 +7,7 @@
 # ==============================================================================
 
 # Set fast mirrors for Electron and electron-builder binaries to prevent GitHub download timeouts
-$env:ELECTRON_BUILDER_BINARIES_MIRROR = "https://npmmirror.com/mirrors/electron-builder-binaries/"
+$env:ELECTRON_BUILDER_BINARIES_MIRROR = "https://registry.npmmirror.com/-/binary/electron-builder-binaries/"
 $env:ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/"
 
 Clear-Host
@@ -72,10 +72,24 @@ Write-Host "[2/3] Compiling, packaging, and compressing sub-applications..." -Fo
 
 # Stop any running instances to release file locks
 Write-Host "Releasing file locks by stopping running YP Arena OS and Electron processes..." -ForegroundColor Yellow
-Stop-Process -Name "YP Arena OS*" -ErrorAction SilentlyContinue
-Stop-Process -Name "YpArenaos*" -ErrorAction SilentlyContinue
-Stop-Process -Name "electron" -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 2
+$processNames = @("YP Arena OS*", "YpArenaos*", "electron", "backend-gui", "yp-arena-os*")
+foreach ($name in $processNames) {
+    Stop-Process -Name $name -Force -ErrorAction SilentlyContinue
+}
+
+# Also stop processes running from this workspace path to release locks
+$workspacePath = (Get-Item -Path ".").FullName
+Get-Process | Where-Object {
+    try {
+        $_.Path -and $_.Path.StartsWith($workspacePath, [System.StringComparison]::OrdinalIgnoreCase) -and $_.Name -ne "powershell" -and $_.Name -ne "cmd" -and $_.Name -ne "node"
+    } catch {
+        $false
+    }
+} | ForEach-Object {
+    Write-Host "Stopping locking process: $($_.Name) (PID: $($_.Id)) running from workspace" -ForegroundColor Yellow
+    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+}
+Start-Sleep -Seconds 3
 
 # Ensure target folder exists
 if (-not (Test-Path "apps\installer")) {
@@ -87,6 +101,11 @@ Write-Host "[BUILD] Building Server Engine..." -ForegroundColor Yellow
 npm run electron:build --workspace=apps/server-engine
 Write-Host "[ZIP] Compressing Server Engine package..." -ForegroundColor Yellow
 if (Test-Path "apps\server-engine\release-builds\win-unpacked") {
+    Write-Host "[COPY] Bundling Edge Server executable into GUI folder..." -ForegroundColor Yellow
+    Copy-Item -Path "apps\edge-server\edge-server.exe" -Destination "apps\server-engine\release-builds\win-unpacked\edge-server.exe" -Force
+    if (Test-Path "apps\edge-server\schema.sql") {
+        Copy-Item -Path "apps\edge-server\schema.sql" -Destination "apps\server-engine\release-builds\win-unpacked\schema.sql" -Force
+    }
     Remove-Item -Path "apps\installer\YP-Arena-OS-Edge-Server.zip" -ErrorAction SilentlyContinue
     Compress-Archive -Path "apps\server-engine\release-builds\win-unpacked\*" -DestinationPath "apps\installer\YP-Arena-OS-Edge-Server.zip" -Force
     Write-Host "[OK] Created YP-Arena-OS-Edge-Server.zip" -ForegroundColor Green
@@ -131,7 +150,7 @@ Push-Location apps/installer
 & $nsisPath setup.nsi
 Pop-Location
 
-$installerFile = "apps/installer/YP-Arena-OS-Unified-Installer.exe"
+$installerFile = "apps/installer/YP-Arena-OS-Unified-Installer-Release.exe"
 if (Test-Path $installerFile) {
     Write-Host "=======================================================================" -ForegroundColor Green
     Write-Host "             COMPILATION SUCCESSFUL!" -ForegroundColor Green
@@ -140,7 +159,7 @@ if (Test-Path $installerFile) {
     Write-Host "Path: $(Resolve-Path $installerFile)" -ForegroundColor Green
     Write-Host ""
     Write-Host "What to upload to S3:" -ForegroundColor Yellow
-    Write-Host "  1. YP-Arena-OS-Unified-Installer.exe  (Upload and link in Vercel)" -ForegroundColor Gray
+    Write-Host "  1. YP-Arena-OS-Unified-Installer-Release.exe  (Upload and link in Vercel)" -ForegroundColor Gray
     Write-Host "  2. YP-Arena-OS-Edge-Server.zip        (Upload to S3)" -ForegroundColor Gray
     Write-Host "  3. YP-Arena-OS-Admin-Dashboard.zip    (Upload to S3)" -ForegroundColor Gray
     Write-Host "  4. YP-Arena-OS-Kiosk-Client.zip       (Upload to S3)" -ForegroundColor Gray

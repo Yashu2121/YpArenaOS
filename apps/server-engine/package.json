@@ -12,11 +12,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:start": "electron .",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder --publish never"
   },
   "build": {
     "appId": "com.yparenaos.server",
     "productName": "YpArenaos Server",
+    "publish": [],
     "win": {
       "target": "nsis"
     },

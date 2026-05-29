@@ -229,4 +229,26 @@ class ApiService {
     );
     return jsonDecode(r.body);
   }
+
+  // ──────────────────────────────────────────────
+  // GENERIC API CALL
+  // ──────────────────────────────────────────────
+  static Future<Map<String, dynamic>> apiCall(String path, {String method = 'GET', Map<String, dynamic>? body}) async {
+    final uri = Uri.parse('$baseUrl$path');
+    http.Response r;
+    if (method.toUpperCase() == 'POST') {
+      r = await http.post(uri, headers: _headers, body: body != null ? jsonEncode(body) : null);
+    } else if (method.toUpperCase() == 'PUT') {
+      r = await http.put(uri, headers: _headers, body: body != null ? jsonEncode(body) : null);
+    } else if (method.toUpperCase() == 'DELETE') {
+      r = await http.delete(uri, headers: _headers, body: body != null ? jsonEncode(body) : null);
+    } else {
+      r = await http.get(uri, headers: _headers);
+    }
+    try {
+      return jsonDecode(r.body);
+    } catch (_) {
+      return {'status': r.statusCode, 'body': r.body};
+    }
+  }
 }

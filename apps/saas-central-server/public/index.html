@@ -492,6 +492,7 @@
 
   <script>
     const API_URL = ''; // Relative since it's hosted by server.js
+    let adminApiKey = localStorage.getItem('ypArenaSaasAdminKey') || '';
 
     const licenseForm = document.getElementById('license-form');
     const licenseList = document.getElementById('license-list');
@@ -500,10 +501,35 @@
     const simBtn = document.getElementById('sim-btn');
     const simLog = document.getElementById('sim-log');
 
+    function getAdminHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        ...(adminApiKey ? { 'x-admin-api-key': adminApiKey } : {})
+      };
+    }
+
+    function ensureAdminKey() {
+      if (adminApiKey) return true;
+      const nextKey = prompt('Enter your SaaS Admin API key. This is the SAAS_ADMIN_API_KEY value from your cloud server environment.');
+      if (!nextKey) return false;
+      adminApiKey = nextKey.trim();
+      localStorage.setItem('ypArenaSaasAdminKey', adminApiKey);
+      return true;
+    }
+
     // Fetch and render licenses
     async function loadLicenses() {
+      if (!ensureAdminKey()) {
+        licenseList.innerHTML = `<div class="empty-state"><p>Admin API key is required to view licenses.</p></div>`;
+        return;
+      }
       try {
-        const res = await fetch(`${API_URL}/api/licenses`);
+        const res = await fetch(`${API_URL}/api/licenses`, { headers: getAdminHeaders() });
+        if (res.status === 401) {
+          localStorage.removeItem('ypArenaSaasAdminKey');
+          adminApiKey = '';
+          throw new Error('Admin API key was rejected.');
+        }
         const data = await res.json();
         
         if (data.length === 0) {
@@ -598,7 +624,7 @@
       try {
         const res = await fetch(`${API_URL}/api/licenses/${key}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(),
           body: JSON.stringify({ status: nextStatus })
         });
         if (res.ok) {
@@ -615,7 +641,7 @@
       try {
         const res = await fetch(`${API_URL}/api/licenses/${key}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(),
           body: JSON.stringify({ resetHardware: true })
         });
         if (res.ok) {
@@ -633,7 +659,7 @@
         const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         const res = await fetch(`${API_URL}/api/licenses/${key}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(),
           body: JSON.stringify({ expiryDate: newExpiry, status: 'active' }) // Reactive if expired
         });
         if (res.ok) {
@@ -650,7 +676,8 @@
       if (!confirm(`Are you sure you want to permanently delete the license: ${key}?`)) return;
       try {
         const res = await fetch(`${API_URL}/api/licenses/${key}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: getAdminHeaders()
         });
         if (res.ok) {
           loadLicenses();
@@ -669,9 +696,10 @@
       const expiryDays = document.getElementById('expiry-days').value;
 
       try {
+        if (!ensureAdminKey()) return;
         const res = await fetch(`${API_URL}/api/licenses`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(),
           body: JSON.stringify({ cafeName, ownerEmail, expiryDays })
         });
         

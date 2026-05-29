@@ -19,6 +19,8 @@ const GAMES = [
 
 export default function App() {
   const [serverUrl, setServerUrl] = useState('http://localhost:4000');
+  const [stationName, setStationName] = useState('PC-UNKNOWN');
+  const [clientId, setClientId] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
   const [manualIp, setManualIp] = useState('');
@@ -35,18 +37,24 @@ export default function App() {
   const [lowBalanceWarning, setLowBalanceWarning] = useState(false);
   const [sessionData, setSessionData] = useState({
     user: '', balance: 0, secondsRemaining: 0, type: '',
-    pointsEarned: 0, gamesPlayed: []
+    pointsEarned: 0, gamesPlayed: [], activeSessionId: null
   });
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateProgress, setUpdateProgress] = useState(0);
+  const [posItems, setPosItems] = useState([]);
   
   const wsRef = useRef(null);
   const timerRef = useRef(null);
   const updateTimerRef = useRef(null);
+  const stationNameRef = useRef('PC-UNKNOWN');
+  const clientIdRef = useRef('');
 
   // ── Auto-Discovery & Connection Verification on Startup ──
   useEffect(() => {
     const cachedUrl = ipcRenderer ? ipcRenderer.sendSync('get-server-url') : 'http://localhost:4000';
+    const detectedStation = ipcRenderer ? ipcRenderer.sendSync('get-station-id') : `WEB-${Math.random().toString(16).slice(2, 8).toUpperCase()}`;
+    stationNameRef.current = detectedStation;
+    setStationName(detectedStation);
     setServerUrl(cachedUrl);
     setManualIp(cachedUrl.replace(/^http:\/\//, '').split(':')[0]);
 
@@ -109,6 +117,10 @@ export default function App() {
   useEffect(() => {
     if (!isConnected) return;
     connectWs();
+    fetch(`${serverUrl}/pos?gamezone_id=b0000000-0000-0000-0000-000000000001`)
+      .then(r => r.json())
+      .then(data => setPosItems(data.items || []))
+      .catch(() => setPosItems([]));
     return () => wsRef.current?.close();
   }, [serverUrl, isConnected]);
 
@@ -120,13 +132,28 @@ export default function App() {
 
       ws.onopen = () => {
         setWsStatus('online');
-        ws.send(JSON.stringify({ type: 'REGISTER_PC', pcId: 'PC-01' }));
+        ws.send(JSON.stringify({
+          type: 'REGISTER_PC',
+          stationName: stationNameRef.current,
+          clientId: clientIdRef.current || undefined
+        }));
       };
 
       ws.onmessage = (e) => {
         const data = JSON.parse(e.data);
         if (data.event === 'SESSION_STARTED' || data.type === 'SESSION_START') {
+          if (data.session?.session_id) {
+            setSessionData(prev => ({ ...prev, activeSessionId: data.session.session_id }));
+          }
           setView('session');
+        }
+        if (data.type === 'REGISTERED') {
+          clientIdRef.current = data.clientId;
+          setClientId(data.clientId);
+          if (data.stationName) {
+            stationNameRef.current = data.stationName;
+            setStationName(data.stationName);
+          }
         }
         if (data.event === 'DEVICE_STATUS_UPDATE' && data.data?.status === 'offline') {
           handleLogout();
@@ -154,7 +181,7 @@ export default function App() {
         if (next === 600) setLowBalanceWarning(true);
 
         if (next % 30 === 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: 'SESSION_HEARTBEAT', pcId: 'PC-01', userId: prev.user, seconds: next }));
+          wsRef.current.send(JSON.stringify({ type: 'SESSION_HEARTBEAT', pcId: clientIdRef.current, stationName: stationNameRef.current, userId: prev.user, seconds: next }));
         }
 
         return { ...prev, secondsRemaining: next };
@@ -191,7 +218,7 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id: 'd1', // Hardcoded demo PC ID
+            client_id: clientIdRef.current,
             game_id: info.game_id,
             progress: 100,
             status: 'up_to_date',
@@ -215,12 +242,12 @@ export default function App() {
     if (!ipcRenderer) return;
     ipcRenderer.on('admin-unlock-triggered', () => {
       ipcRenderer.send('unlock-pc');
-      setSessionData({ user: 'Admin Override', balance: 9999, secondsRemaining: 99999, type: 'admin', pointsEarned: 0, gamesPlayed: [] });
+      setSessionData({ user: 'Admin Override', balance: 9999, secondsRemaining: 99999, type: 'admin', pointsEarned: 0, gamesPlayed: [], activeSessionId: null });
       setView('session');
     });
     ipcRenderer.on('tournament-mode-activated', () => {
       ipcRenderer.send('unlock-pc');
-      setSessionData({ user: 'Tournament Match', balance: 0, secondsRemaining: 14400, type: 'tournament', pointsEarned: 0, gamesPlayed: [] });
+      setSessionData({ user: 'Tournament Match', balance: 0, secondsRemaining: 14400, type: 'tournament', pointsEarned: 0, gamesPlayed: [], activeSessionId: null });
       setView('session');
     });
   }, []);
@@ -240,7 +267,7 @@ export default function App() {
       });
       const data = await res.json();
       if (res.ok) {
-        setSessionData({ user: data.user?.name || username, balance: 500.00, secondsRemaining: 5400, type: 'membership', pointsEarned: 0, gamesPlayed: [] });
+        setSessionData({ user: data.user?.name || username, balance: 500.00, secondsRemaining: 5400, type: 'membership', pointsEarned: 0, gamesPlayed: [], activeSessionId: null });
         setTimeout(() => setView('session'), 1200);
         return;
       }
@@ -248,9 +275,9 @@ export default function App() {
 
     setTimeout(() => {
       if (loginMode === 'membership') {
-        setSessionData({ user: username || 'Guest Member', balance: 500.00, secondsRemaining: 5400, type: 'membership', pointsEarned: 0, gamesPlayed: [] });
+        setSessionData({ user: username || 'Guest Member', balance: 500.00, secondsRemaining: 5400, type: 'membership', pointsEarned: 0, gamesPlayed: [], activeSessionId: null });
       } else {
-        setSessionData({ user: `Guest-${guestTicket.slice(0, 4)}`, balance: 0, secondsRemaining: 3600, type: 'guest', pointsEarned: 0, gamesPlayed: [] });
+        setSessionData({ user: `Guest-${guestTicket.slice(0, 4)}`, balance: 0, secondsRemaining: 3600, type: 'guest', pointsEarned: 0, gamesPlayed: [], activeSessionId: null });
       }
       setView('session');
     }, 1200);
@@ -270,6 +297,30 @@ export default function App() {
     if (sessionData.balance < cost) { alert('Insufficient balance. Please top up at the front desk.'); return; }
     setSessionData(prev => ({ ...prev, secondsRemaining: prev.secondsRemaining + (hrs * 3600), balance: prev.balance - cost }));
     setLowBalanceWarning(false);
+  };
+
+  const handleOrderItem = async (item) => {
+    const price = Number(item.price || 0);
+    if(sessionData.balance < price) { alert('Insufficient balance.'); return; }
+
+    try {
+      const res = await fetch(`${serverUrl}/pos/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pos_id: item.pos_id || item.id,
+          gamezone_id: 'b0000000-0000-0000-0000-000000000001',
+          session_id: sessionData.activeSessionId,
+          quantity: 1
+        })
+      });
+      if (!res.ok) throw new Error('Order failed');
+      const data = await res.json();
+      setSessionData(p => ({ ...p, balance: p.balance - Number(data.total || price) }));
+      alert('Order sent to front desk.');
+    } catch (e) {
+      alert('Could not place order. Please call staff.');
+    }
   };
 
   const handleLogout = () => {
@@ -458,7 +509,7 @@ export default function App() {
                   <div className={`w-2 h-2 rounded-full ${wsStatus === 'online' ? 'bg-green-400' : 'bg-red-400'}`} />
                   <span className="text-xs text-gray-400 tracking-widest uppercase">System {wsStatus}</span>
                 </div>
-                <p className="text-gray-500 text-xs tracking-wider">Station: PC-01 (10.0.0.45)</p>
+                <p className="text-gray-500 text-xs tracking-wider">Station: {stationName}</p>
               </div>
             </div>
 
@@ -660,14 +711,21 @@ export default function App() {
                 <div className="h-full flex flex-col">
                   <h2 className="text-2xl font-light text-white tracking-wide mb-8">Service & POS</h2>
                   <div className="flex-1 overflow-y-auto pr-2" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:'20px', alignContent: 'start' }}>
-                    {[
+                    {(posItems.length ? posItems.map(item => ({
+                      id: item.pos_id,
+                      pos_id: item.pos_id,
+                      name: item.item_name,
+                      price: Number(item.price),
+                      icon: item.category === 'food' ? '🍔' : item.category === 'beverage' ? '🥤' : item.category === 'voucher' ? '🎟' : '📦',
+                      cat: item.category
+                    })) : [
                       { id: 'p1', name: 'Red Bull Energy', price: 120, icon: '🥤', cat: 'Beverage' },
                       { id: 'p2', name: 'Monster Energy', price: 110, icon: '⚡', cat: 'Beverage' },
                       { id: 'p3', name: 'Cheese Pizza', price: 250, icon: '🍕', cat: 'Food' },
                       { id: 'p4', name: 'Chicken Burger', price: 180, icon: '🍔', cat: 'Food' },
                       { id: 'p5', name: 'Doritos Nacho', price: 50, icon: '🧀', cat: 'Snack' },
                       { id: 'p6', name: 'Razer Headset Rental', price: 100, icon: '🎧', cat: 'Peripheral' },
-                    ].map(item => (
+                    ]).map(item => (
                       <div key={item.id} className="p-5 border border-white/5 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors flex flex-col cursor-pointer">
                         <div className="flex items-center gap-4 mb-6">
                           <div className="w-12 h-12 rounded-lg bg-black/40 flex items-center justify-center text-2xl">{item.icon}</div>
@@ -678,10 +736,7 @@ export default function App() {
                         </div>
                         <div className="mt-auto flex justify-between items-center pt-4 border-t border-white/5">
                           <span className="text-sm text-blue-400 font-medium">₹{item.price}</span>
-                          <button onClick={() => {
-                            if(sessionData.balance < item.price) { alert('Insufficient balance.'); return; }
-                            alert('Order requested.'); setSessionData(p => ({ ...p, balance: p.balance - item.price }));
-                          }} className="text-[10px] uppercase tracking-widest text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition-colors">
+                          <button onClick={() => handleOrderItem(item)} className="text-[10px] uppercase tracking-widest text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded transition-colors">
                             Order
                           </button>
                         </div>
@@ -697,7 +752,7 @@ export default function App() {
                   <h2 className="text-2xl font-light text-white tracking-wide mb-8">Analytics Overview</h2>
                   <div className="grid grid-cols-2 gap-4">
                     {[
-                      { l: 'Station Node', v: 'PC-01 (10.0.0.45)' },
+                      { l: 'Station Node', v: stationName },
                       { l: 'Authorization Type', v: sessionData.type.toUpperCase() },
                       { l: 'Applications Initialized', v: sessionData.gamesPlayed.length > 0 ? sessionData.gamesPlayed.join(', ') : 'None' },
                       { l: 'Activity Score', v: `${sessionData.pointsEarned} pts` },

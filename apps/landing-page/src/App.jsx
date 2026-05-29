@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Shield, Monitor, RefreshCw, ShoppingCart, Download, Copy, Check, Info, CreditCard } from 'lucide-react';
 
-const SAAS_API = import.meta.env.VITE_SAAS_API_URL || 'http://localhost:5000';
+// SAAS_API is an empty string so that Vercel Proxy catches the requests.
+const SAAS_API = '';
 
 export default function App() {
   const [pcCount, setPcCount] = useState(25);
@@ -20,8 +21,10 @@ export default function App() {
     else if (pcCount > 50) rate = 50;
     else if (pcCount > 15) rate = 60;
     
-    setPricePerPc(rate);
-    setTotalCost(pcCount * rate);
+    setTimeout(() => {
+      setPricePerPc(rate);
+      setTotalCost(pcCount * rate);
+    }, 0);
   }, [pcCount]);
 
   const handleCheckoutSubmit = async (e) => {
@@ -34,31 +37,87 @@ export default function App() {
     setCheckoutStep(2); // Loading
 
     try {
-      const res = await fetch(`${SAAS_API}/api/licenses`, {
+      // 1. Create Order on Server
+      const orderRes = await fetch(`${SAAS_API}/api/checkout/razorpay/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cafeName: formData.cafeName,
           ownerEmail: formData.ownerEmail,
-          expiryDays: formData.trialDuration
+          trialDuration: formData.trialDuration,
+          pcCount,
+          totalCost
         })
       });
-      
-      const data = await res.json();
-      if (res.ok) {
-        setGeneratedKey(data.key);
-        setCheckoutStep(3); // Success
-      } else {
-        alert(data.error || 'Failed to register subscription.');
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) throw new Error(orderData.error || 'Failed to create order');
+
+      // 2. Initialize Razorpay Checkout
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'YP Arena OS',
+        description: `Subscription for ${formData.cafeName}`,
+        order_id: orderData.orderId,
+        handler: async function (response) {
+          try {
+            setCheckoutStep(2); // Loading again for verification
+            // 3. Verify Payment
+            const verifyRes = await fetch(`${SAAS_API}/api/checkout/razorpay/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                metadata: {
+                  cafeName: formData.cafeName,
+                  ownerEmail: formData.ownerEmail,
+                  trialDuration: formData.trialDuration,
+                  pcCount
+                }
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              setGeneratedKey(verifyData.license.key);
+              setCheckoutStep(3); // Success
+            } else {
+              alert(verifyData.error || 'Payment verification failed.');
+              setCheckoutStep(1);
+            }
+          } catch (err) {
+            alert('Error during verification: ' + err.message);
+            setCheckoutStep(1);
+          }
+        },
+        prefill: {
+          name: formData.cafeName,
+          email: formData.ownerEmail,
+        },
+        theme: {
+          color: '#6366F1'
+        },
+        modal: {
+          ondismiss: function() {
+            setCheckoutStep(1);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response) {
+        alert('Payment failed: ' + response.error.description);
         setCheckoutStep(1);
-      }
+      });
+      rzp.open();
+
     } catch (err) {
-      // Fallback local key generation if server is offline
-      setTimeout(() => {
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        setGeneratedKey(`YP-CAFE-${rand}-MOCK`);
-        setCheckoutStep(3);
-      }, 1500);
+      alert('Error initiating checkout: ' + err.message);
+      setCheckoutStep(1);
     }
   };
 
@@ -226,7 +285,7 @@ export default function App() {
                   </ul>
                 </div>
                 <button onClick={() => setCheckoutOpen(true)} className="btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '12px', fontSize: '13px', marginTop: '24px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                  Purchase License Key
+                  Purchase License
                 </button>
               </div>
 
@@ -267,7 +326,7 @@ export default function App() {
         <p>&copy; 2026 YP Arena OS Enterprise. All rights reserved.</p>
       </footer>
 
-      {/* STRIPE SIMULATED CHECKOUT MODAL */}
+      {/* RAZORPAY CHECKOUT MODAL */}
       {checkoutOpen && (
         <div className="modal-overlay">
           <div className="glass animate-fade-in" style={{ maxWidth: '440px', width: '100%', borderRadius: '28px', border: '1px solid rgba(255, 255, 255, 0.1)', overflow: 'hidden' }}>
@@ -276,7 +335,7 @@ export default function App() {
             <div style={{ background: 'rgba(99, 102, 241, 0.1)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CreditCard size={18} color="var(--indigo)" />
-                <span style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Stripe Gateway</span>
+                <span style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Razorpay Secure Checkout</span>
               </div>
               <button onClick={() => { setCheckoutOpen(false); setCheckoutStep(1); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}>✕</button>
             </div>
@@ -327,11 +386,11 @@ export default function App() {
                 </div>
 
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px dashed var(--border-color)', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                  🛡️ This is a simulated checkout. Click "Confirm Purchase" to register a live active license key on the central database.
+                  This will securely process your payment via Razorpay. Your license key will be issued immediately upon successful payment.
                 </div>
 
                 <button type="submit" className="btn-primary" style={{ padding: '14px', borderRadius: '12px', fontWeight: 800, textTransform: 'uppercase', fontSize: '12px', marginTop: '10px' }}>
-                  Confirm Purchase & Pay
+                  Pay Now via Razorpay
                 </button>
               </form>
             )}
@@ -342,7 +401,7 @@ export default function App() {
                 <div className="spinner" />
                 <div>
                   <h4 style={{ fontWeight: 800, fontSize: '15px' }}>Processing Payment...</h4>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>Authorizing with Stripe Licensing database</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>Authorizing with Razorpay</p>
                 </div>
               </div>
             )}
@@ -352,7 +411,7 @@ export default function App() {
               <div style={{ padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: '24px', textAlign: 'center' }}>
                 <div>
                   <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: 'var(--green)', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 16px' }}>✓</div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '6px' }}>Payment Approved</h3>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '6px' }}>Trial Key Created</h3>
                   <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Your YP Arena OS enterprise subscription is now active.</p>
                 </div>
 

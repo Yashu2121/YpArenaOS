@@ -28,6 +28,7 @@
   "build": {
     "appId": "com.yp-arena-os.kioskclient",
     "productName": "YP Arena OS Client",
+    "publish": [],
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico"

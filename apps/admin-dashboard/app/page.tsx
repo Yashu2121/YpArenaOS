@@ -5,6 +5,8 @@ import { Monitor, Settings, BarChart2, Receipt, Trophy, ShoppingCart, Activity, 
 
 const API = 'http://localhost:4000';
 const WS_URL = 'ws://localhost:4000';
+const DEMO_ADMIN_EMAIL = 'owner@yparenaos.com';
+const DEMO_ADMIN_PASSWORD = 'admin123';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('grid');
@@ -25,12 +27,41 @@ export default function AdminDashboard() {
   const [newDevice, setNewDevice] = useState({ name: '', device_type: 'PC', hourly_rate: '50', ip_address: '' });
 
   const wsRef = useRef(null);
+  const authTokenRef = useRef('');
+
+  async function apiFetch(path: string, options: RequestInit = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(authTokenRef.current ? { Authorization: `Bearer ${authTokenRef.current}` } : {}),
+      ...(options.headers || {})
+    };
+    return fetch(`${API}${path}`, { ...options, headers });
+  }
+
+  async function bootstrapDemoSession() {
+    try {
+      const r = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: DEMO_ADMIN_EMAIL, password: DEMO_ADMIN_PASSWORD })
+      });
+      const data = await r.json();
+      if (data.token) {
+        authTokenRef.current = data.token;
+      }
+    } catch (e) {
+      console.warn('Demo auth unavailable; read-only dashboard calls will still load.');
+    } finally {
+      fetchDevices();
+      fetchStats();
+      fetchLicenseStatus();
+      fetchSessions();
+    }
+  }
 
   // ── Fetch initial data ──────────────────────────────────────
   useEffect(() => {
-    fetchDevices();
-    fetchStats();
-    fetchLicenseStatus();
+    bootstrapDemoSession();
   }, []);
 
   useEffect(() => {
@@ -66,6 +97,7 @@ export default function AdminDashboard() {
         if (msg.event === 'SESSION_STARTED' || msg.event === 'SESSION_ENDED') {
           fetchStats();
           fetchDevices();
+          fetchSessions();
         }
         if (msg.event === 'NEW_ORDER') {
           setIncomingOrders(prev => [msg.data, ...prev]);
@@ -85,7 +117,7 @@ export default function AdminDashboard() {
 
   async function fetchLicenseStatus() {
     try {
-      const r = await fetch(`${API}/api/license/status`);
+      const r = await apiFetch('/api/license/status');
       const data = await r.json();
       setLicenseStatus(data);
     } catch (e) { console.error('fetchLicenseStatus:', e); }
@@ -97,7 +129,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const r = await fetch(`${API}/api/license/activate`, {
+      const r = await apiFetch('/api/license/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ licenseKey: newLicenseKey })
@@ -124,7 +156,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const r = await fetch(`${API}/pos`, {
+      const r = await apiFetch('/pos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPosItem)
@@ -149,7 +181,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const r = await fetch(`${API}/clients`, {
+      const r = await apiFetch('/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newDevice)
@@ -171,7 +203,7 @@ export default function AdminDashboard() {
 
   async function fetchDevices() {
     try {
-      const r = await fetch(`${API}/clients`);
+      const r = await apiFetch('/clients');
       const data = await r.json();
       setDevices(data.clients || []);
     } catch (e) { console.error('fetchDevices:', e); }
@@ -179,7 +211,7 @@ export default function AdminDashboard() {
 
   async function fetchStats() {
     try {
-      const r = await fetch(`${API}/stats`);
+      const r = await apiFetch('/stats');
       const data = await r.json();
       setStats(data);
     } catch (e) { console.error('fetchStats:', e); }
@@ -187,7 +219,7 @@ export default function AdminDashboard() {
 
   async function fetchSessions() {
     try {
-      const r = await fetch(`${API}/sessions/active`);
+      const r = await apiFetch('/sessions/active');
       const data = await r.json();
       setSessions(data.sessions || []);
     } catch (e) { console.error('fetchSessions:', e); }
@@ -195,7 +227,7 @@ export default function AdminDashboard() {
 
   async function fetchPos() {
     try {
-      const r = await fetch(`${API}/pos?gamezone_id=b0000000-0000-0000-0000-000000000001`);
+      const r = await apiFetch('/pos?gamezone_id=b0000000-0000-0000-0000-000000000001');
       const data = await r.json();
       setPosItems(data.items || []);
     } catch (e) { console.error('fetchPos:', e); }
@@ -203,7 +235,7 @@ export default function AdminDashboard() {
 
   async function fetchTournaments() {
     try {
-      const r = await fetch(`${API}/tournaments`);
+      const r = await apiFetch('/tournaments');
       const data = await r.json();
       setTournaments(data.tournaments || []);
     } catch (e) { console.error('fetchTournaments:', e); }
@@ -211,12 +243,12 @@ export default function AdminDashboard() {
 
   async function startSession(clientId) {
     try {
-      const r = await fetch(`${API}/sessions/start`, {
+      const r = await apiFetch('/sessions/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: clientId, gamezone_id: 'b0000000-0000-0000-0000-000000000001' })
       });
-      if (r.ok) { fetchDevices(); fetchStats(); }
+      if (r.ok) { fetchDevices(); fetchStats(); fetchSessions(); }
     } catch (e) { alert('Could not start session — is the server running?'); }
   }
 
@@ -224,7 +256,7 @@ export default function AdminDashboard() {
     const active = sessions.find(s => s.client_id === clientId);
     if (!active) {
       alert('Stopping session... (Connect to live DB for full flow)');
-      await fetch(`${API}/clients/${clientId}/status`, {
+      await apiFetch(`/clients/${clientId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'online' })
@@ -233,7 +265,7 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      const r = await fetch(`${API}/sessions/${active.session_id}/stop`, { method: 'POST' });
+      const r = await apiFetch(`/sessions/${active.session_id}/stop`, { method: 'POST' });
       if (r.ok) { fetchDevices(); fetchStats(); fetchSessions(); }
     } catch (e) { alert('Could not stop session'); }
   }

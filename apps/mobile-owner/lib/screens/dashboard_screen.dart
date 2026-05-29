@@ -27,7 +27,6 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
   static const _red   = Color(0xFFEF4444); // Soft Red
   static const _purple= Color(0xFF8B5CF6); // Soft Purple
   static const _bg    = Color(0xFF050505); // Deep Charcoal Black
-  static const _panel = Color(0xFF111111); // Elevated Dark Gray
 
   @override
   void initState() {

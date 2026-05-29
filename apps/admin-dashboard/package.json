@@ -8,11 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:electron": "next build && electron-builder"
+    "build:electron": "next build && electron-builder --publish never"
   },
   "build": {
     "appId": "com.yp-arena-os.administrator",
     "productName": "YP Arena OS Administrator",
+    "publish": [],
     "win": {
       "target": "nsis"
     },
