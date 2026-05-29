@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "npm run build --workspace=apps/landing-page && node -e \"require('fs').cpSync('apps/landing-page/dist', 'dist', {recursive: true})\"",
     "dev:all": "npm run dev --workspaces --if-present",
     "build:all": "npm run build --workspaces --if-present",
     "lint:all": "npm run lint --workspaces --if-present"
