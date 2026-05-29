@@ -69,10 +69,10 @@ export default function App() {
   };
 
   const s3Links = {
-    installer: 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Unified-Installer.exe',
-    server: 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Edge-Server.exe',
-    client: 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Kiosk-Client.exe',
-    admin: 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Admin-Dashboard.exe'
+    installer: import.meta.env.VITE_DOWNLOAD_INSTALLER || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Unified-Installer.exe',
+    server: import.meta.env.VITE_DOWNLOAD_SERVER || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Edge-Server.exe',
+    client: import.meta.env.VITE_DOWNLOAD_CLIENT || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Kiosk-Client.exe',
+    admin: import.meta.env.VITE_DOWNLOAD_ADMIN || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Admin-Dashboard.exe'
   };
 
   return (
