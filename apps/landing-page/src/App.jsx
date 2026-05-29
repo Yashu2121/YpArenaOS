@@ -232,59 +232,34 @@ export default function App() {
 
             </div>
           </div>
-        </section>
-
-        {/* DOWNLOAD CENTER */}
-        <section id="downloads" style={{ marginBottom: '60px' }}>
-          <h2 style={{ fontSize: '32px', fontWeight: 800, textAlign: 'center', marginBottom: '12px' }}>Download Enterprise Installers</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginBottom: '48px' }}>Host files on cloud S3 distributions for fast deployments.</p>
+              {/* DOWNLOAD CENTER */}
+        <section id="downloads" style={{ marginBottom: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: 800, textAlign: 'center', marginBottom: '12px' }}>Download YP Arena OS Installer</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', marginBottom: '48px', maxWidth: '500px' }}>
+            Get the unified bootstrap installer. Choose which components to deploy (Server, Client, Admin) during setup.
+          </p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-            
-            <div className="glass" style={{ padding: '32px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center' }}>
-                <span style={{ background: 'rgba(99, 102, 241, 0.1)', color: 'var(--indigo)', fontSize: '10px', padding: '4px 8px', borderRadius: '4px', fontWeight: 800, uppercase: 'true' }}>Unified</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>35 MB</span>
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Unified Installer</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5, flexGrow: 1 }}>
-                Recommended. Single installer wizard built with NSIS script containing Server, Client, and Admin packages.
-              </p>
-              <a href={s3Links.installer} className="btn-primary" style={{ padding: '12px', borderRadius: '10px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px' }}>
-                <Download size={14} /> Download Installer
-              </a>
+          <div className="glass glass-hover" style={{ padding: '40px', borderRadius: '28px', maxWidth: '500px', width: '100%', display: 'flex', flexDirection: 'column', gap: '24px', border: '1px solid rgba(0, 240, 255, 0.2)', boxShadow: '0 20px 40px -20px rgba(0, 240, 255, 0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ background: 'rgba(0, 240, 255, 0.1)', color: 'var(--cyan)', fontSize: '10px', padding: '6px 12px', borderRadius: '6px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unified Stub Installer</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>&lt; 2 MB</span>
             </div>
-
-            <div className="glass" style={{ padding: '32px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center' }}>
-                <span style={{ background: 'rgba(0, 240, 255, 0.1)', color: 'var(--cyan)', fontSize: '10px', padding: '4px 8px', borderRadius: '4px', fontWeight: 800, uppercase: 'true' }}>Core Engine</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>41 MB</span>
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Master Edge Server</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5, flexGrow: 1 }}>
-                Standalone. Copy and run directly on your Master Server computer at the front desk. Connects locally to PostgreSQL.
+            <div>
+              <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '12px' }}>YP Arena OS Bootstrapper</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.6 }}>
+                Downloads and configures components automatically. Simply select the checkboxes for the modules you need on this machine:
               </p>
-              <a href={s3Links.server} className="btn-secondary" style={{ padding: '12px', borderRadius: '10px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px' }}>
-                <Download size={14} /> Download Edge Server
-              </a>
+              <ul style={{ color: 'var(--text-muted)', fontSize: '12px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+                <li>🖥️ <strong>Master Edge Server Node:</strong> Deploy on front-desk Master PC.</li>
+                <li>📊 <strong>Administrator Dashboard:</strong> Café management portal.</li>
+                <li>🎮 <strong>Kiosk Client Shell:</strong> Lock-screen launcher for gaming terminals.</li>
+              </ul>
             </div>
-
-            <div className="glass" style={{ padding: '32px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center' }}>
-                <span style={{ background: 'rgba(255, 184, 0, 0.1)', color: 'var(--gold)', fontSize: '10px', padding: '4px 8px', borderRadius: '4px', fontWeight: 800, uppercase: 'true' }}>Kiosk Shell</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>62 MB</span>
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700 }}>Client Kiosk Client</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5, flexGrow: 1 }}>
-                Standalone. Install on all client PCs. Locks down keyboard shortcuts and opens as full-screen kiosk.
-              </p>
-              <a href={s3Links.client} className="btn-secondary" style={{ padding: '12px', borderRadius: '10px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '12px' }}>
-                <Download size={14} /> Download Client Shell
-              </a>
-            </div>
-
+            <a href={s3Links.installer} className="btn-primary" style={{ padding: '16px', borderRadius: '12px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '14px', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 800 }}>
+              <Download size={18} /> Download Unified Installer
+            </a>
           </div>
-        </section>
+        </section>    </section>
 
       </main>
 
