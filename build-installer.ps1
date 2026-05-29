@@ -37,7 +37,7 @@ if (-not $nsisPath) {
     $installChoice = Read-Host
     if ($installChoice -eq "y" -or $installChoice -eq "Y") {
         Write-Host "Installing NSIS..." -ForegroundColor Yellow
-        & winget install --id Nullsoft.NSIS --silent --accept-package-agreements --accept-source-agreements
+        & winget install --id NSIS.NSIS --silent --accept-package-agreements --accept-source-agreements
         Start-Sleep -Seconds 10
         # Recheck common paths
         foreach ($path in $commonPaths) {
