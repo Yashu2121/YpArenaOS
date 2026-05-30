@@ -40,7 +40,8 @@
     },
     "files": [
       "dist/**/*",
-      "main.js"
+      "main.js",
+      "watchdog.js"
     ],
     "directories": {
       "buildResources": "assets",
