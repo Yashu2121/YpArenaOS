@@ -62,16 +62,18 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
       });
     } catch (e) {
       if (mounted) setState(() {
-        _stats = {'today': {'revenue': 24530, 'hours': 48.5}, 'active_sessions': 3, 'devices': {'total': 8, 'online': 5, 'in_use': 3}, 'total_customers': 147};
-        _devices = [
-          {'client_id': 'd1', 'name': 'PC-01', 'device_type': 'PC', 'status': 'in_use', 'hourly_rate': 60, 'specs': {'gpu': 'RTX 4070'}},
-          {'client_id': 'd2', 'name': 'PC-02', 'device_type': 'PC', 'status': 'online', 'hourly_rate': 60, 'specs': {'gpu': 'RTX 4070'}},
-          {'client_id': 'd3', 'name': 'PC-03', 'device_type': 'PC', 'status': 'offline', 'hourly_rate': 40, 'specs': {'gpu': 'RTX 3060'}},
-          {'client_id': 'd4', 'name': 'PS5-VIP', 'device_type': 'PS5', 'status': 'online', 'hourly_rate': 80, 'specs': {}},
-        ];
+        _stats = {};
+        _devices = [];
         _sessions = [];
+        _tournaments = [];
+        _posItems = [];
         _loading = false;
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sync live data: $e'), backgroundColor: _red),
+        );
+      }
     }
   }
 
@@ -268,11 +270,11 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
         crossAxisSpacing: 12,
         childAspectRatio: 1.1,
         children: [
-          _quickAction(Icons.lock_open_rounded, 'Unlock All', _blue, () {}),
+          _quickAction(Icons.lock_outline_rounded, 'Lock All', _red, () => _sendGlobalCommand('lock')),
+          _quickAction(Icons.lock_open_rounded, 'Unlock All', _blue, () => _sendGlobalCommand('unlock')),
+          _quickAction(Icons.power_settings_new_rounded, 'Reboot All', _red, () => _sendGlobalCommand('reboot')),
           _quickAction(Icons.broadcast_on_personal_rounded, 'Broadcast', Colors.white, () => _showBroadcastDialog()),
-          _quickAction(Icons.add_circle_outline_rounded, 'Add Device', Colors.white, () {}),
           _quickAction(Icons.receipt_long_rounded, 'New Sale', Colors.white, () => setState(() => _selectedTab = 3)),
-          _quickAction(Icons.emoji_events_rounded, 'Tournament', Colors.white, () => setState(() => _selectedTab = 4)),
           _quickAction(Icons.system_update_alt_rounded, 'Patch Manager', _green, () => _showPatchManagerDialog()),
         ],
       ),
@@ -599,7 +601,16 @@ class _DashboardScreenState extends State<DashboardScreen> with TickerProviderSt
     )),
   ]);
 
-  // ─── DIALOGS ────────────────────────────────────
+  // ─── DIALOGS & ACTIONS ──────────────────────────
+  Future<void> _sendGlobalCommand(String cmd) async {
+    try {
+      await ApiService.apiCall('/clients/command/all', method: 'POST', body: {'command': cmd});
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Command "$cmd" sent to all PCs.'), backgroundColor: _green));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to send command: $e'), backgroundColor: _red));
+    }
+  }
+
   void _showBroadcastDialog() {
     final ctrl = TextEditingController();
     showDialog(context: context, builder: (_) => AlertDialog(

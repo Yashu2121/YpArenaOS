@@ -4,8 +4,11 @@ import 'package:http/http.dart' as http;
 /// YpArenaOS API Service
 /// Central HTTP client for all mobile app API calls.
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:4000'; // Android emulator → localhost
-  // For physical device: change to your PC's local IP e.g. 'http://192.168.1.100:4000'
+  static String baseUrl = 'http://10.0.2.2:4000'; // Default, will be updated from Login Screen
+
+  static void setBaseUrl(String url) {
+    baseUrl = url;
+  }
 
   static String? _authToken;
   static Map<String, dynamic>? _currentUser;
