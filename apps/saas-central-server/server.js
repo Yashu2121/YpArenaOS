@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -14,6 +17,8 @@ const VERSION = '1.1.0';
 const DB_FILE = process.env.LICENSE_DB_FILE
   ? path.resolve(process.env.LICENSE_DB_FILE)
   : path.join(__dirname, 'licenses.json');
+const USERS_DB_FILE = path.join(__dirname, 'users.json');
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_jwt_key_override_in_production_123';
 const ADMIN_API_KEY = process.env.SAAS_ADMIN_API_KEY || '';
 const EDGE_VALIDATION_SECRET = process.env.EDGE_VALIDATION_SECRET || '';
 const PUBLIC_TRIAL_ENABLED = process.env.PUBLIC_TRIAL_ENABLED === 'true';
@@ -124,6 +129,33 @@ function initLicensesFile() {
   fs.writeFileSync(DB_FILE, JSON.stringify(initialLicenses, null, 2), 'utf8');
 }
 
+function initUsersFile() {
+  ensureDbDirectory();
+  if (fs.existsSync(USERS_DB_FILE)) return;
+  const initialUsers = [
+    {
+      id: uuidv4(),
+      email: 'admin@yparena.com',
+      passwordHash: bcrypt.hashSync('admin123', 10),
+      role: 'admin',
+      createdAt: new Date().toISOString()
+    }
+  ];
+  fs.writeFileSync(USERS_DB_FILE, JSON.stringify(initialUsers, null, 2), 'utf8');
+}
+
+function readUsers() {
+  initUsersFile();
+  try {
+    return JSON.parse(fs.readFileSync(USERS_DB_FILE, 'utf8'));
+  } catch (err) {
+    return [];
+  }
+}
+
+function writeUsers(users) {
+  fs.writeFileSync(USERS_DB_FILE, JSON.stringify(users, null, 2), 'utf8');
+}
 function normalizeLicense(license) {
   return {
     plan: 'arena-pro',
@@ -157,6 +189,23 @@ function writeLicenses(licenses) {
   const tmpFile = `${DB_FILE}.${process.pid}.tmp`;
   fs.writeFileSync(tmpFile, JSON.stringify(licenses.map(normalizeLicense), null, 2), 'utf8');
   fs.renameSync(tmpFile, DB_FILE);
+}
+
+function generateToken(user) {
+  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+}
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.status(401).json({ error: 'Authentication required' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
+    req.user = user;
+    next();
+  });
 }
 
 function requireAdmin(req, res, next) {
@@ -255,6 +304,85 @@ app.get('/health', (req, res) => {
     publicTrialEnabled: PUBLIC_TRIAL_ENABLED,
     timestamp: new Date().toISOString()
   });
+});
+
+// --- AUTHENTICATION ---
+app.post('/api/auth/register', rateLimit({ windowMs: 60_000, max: 10, prefix: 'auth-register' }), (req, res) => {
+  const { email, password } = req.body;
+  if (!isValidEmail(email)) return res.status(400).json({ error: 'Valid email required' });
+  if (!password || password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+  const users = readUsers();
+  if (users.some(u => u.email === email.toLowerCase())) {
+    return res.status(400).json({ error: 'Email already registered' });
+  }
+
+  const newUser = {
+    id: uuidv4(),
+    email: email.toLowerCase(),
+    passwordHash: bcrypt.hashSync(password, 10),
+    role: 'customer',
+    createdAt: new Date().toISOString()
+  };
+
+  users.push(newUser);
+  writeUsers(users);
+
+  res.status(201).json({ token: generateToken(newUser), user: { id: newUser.id, email: newUser.email, role: newUser.role } });
+});
+
+app.post('/api/auth/login', rateLimit({ windowMs: 60_000, max: 20, prefix: 'auth-login' }), (req, res) => {
+  const { email, password } = req.body;
+  const users = readUsers();
+  const user = users.find(u => u.email === (email || '').toLowerCase());
+
+  if (!user || !bcrypt.compareSync(password || '', user.passwordHash)) {
+    return res.status(401).json({ error: 'Invalid email or password' });
+  }
+
+  res.json({ token: generateToken(user), user: { id: user.id, email: user.email, role: user.role } });
+});
+
+app.get('/api/user/me', authenticateToken, (req, res) => {
+  res.json({ user: req.user });
+});
+
+// --- CUSTOMER DASHBOARD ---
+app.get('/api/user/licenses', authenticateToken, (req, res) => {
+  const licenses = readLicenses().filter(l => l.ownerEmail === req.user.email);
+  res.json(licenses.map(l => sanitizeLicense(l, { admin: false })));
+});
+
+// --- SUPER ADMIN SAAS DASHBOARD ---
+function requireSuperAdmin(req, res, next) {
+  authenticateToken(req, res, () => {
+    if (req.user && req.user.role === 'admin') return next();
+    return res.status(403).json({ error: 'Super Admin access required' });
+  });
+}
+
+app.get('/api/saas/stats', requireSuperAdmin, (req, res) => {
+  const users = readUsers();
+  const licenses = readLicenses();
+  
+  const totalRevenue = licenses.reduce((sum, l) => sum + (l.billing?.amount || 0), 0);
+  const activeLicenses = licenses.filter(l => l.status === 'active').length;
+
+  res.json({
+    totalUsers: users.length,
+    totalLicenses: licenses.length,
+    activeLicenses,
+    totalRevenue
+  });
+});
+
+app.get('/api/saas/users', requireSuperAdmin, (req, res) => {
+  const users = readUsers().map(u => ({ id: u.id, email: u.email, role: u.role, createdAt: u.createdAt }));
+  res.json(users);
+});
+
+app.get('/api/saas/licenses', requireSuperAdmin, (req, res) => {
+  res.json(readLicenses().map(license => sanitizeLicense(license, { admin: true })));
 });
 
 app.get('/api/licenses', requireAdmin, rateLimit({ windowMs: 60_000, max: 120, prefix: 'admin-list' }), (req, res) => {
