@@ -23,7 +23,7 @@ export default function App() {
     
     setTimeout(() => {
       setPricePerPc(rate);
-      setTotalCost(pcCount * rate);
+      setTotalCost(1); // Set to 1 Rupee for live testing
     }, 0);
   }, [pcCount]);
 
