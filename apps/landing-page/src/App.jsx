@@ -128,7 +128,7 @@ export default function App() {
   };
 
   const s3Links = {
-    installer: import.meta.env.VITE_DOWNLOAD_INSTALLER || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Unified-Installer.exe',
+    installer: import.meta.env.VITE_DOWNLOAD_INSTALLER || 'https://yparenaos-dist-yashu.s3.us-east-1.amazonaws.com/YP-Arena-OS-Unified-Installer-Release.exe',
     server: import.meta.env.VITE_DOWNLOAD_SERVER || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Edge-Server.exe',
     client: import.meta.env.VITE_DOWNLOAD_CLIENT || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Kiosk-Client.exe',
     admin: import.meta.env.VITE_DOWNLOAD_ADMIN || 'https://yparenaos-dist.s3.amazonaws.com/YP-Arena-OS-Admin-Dashboard.exe'
