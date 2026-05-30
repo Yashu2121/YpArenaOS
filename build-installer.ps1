@@ -91,8 +91,14 @@ Get-Process | Where-Object {
 }
 Start-Sleep -Seconds 3
 
-# Ensure target folder exists
-if (-not (Test-Path "apps\installer")) {
+# Ensure target folder exists and clean old builds
+if (Test-Path "apps\installer") {
+    Write-Host "Cleaning up old installer builds..." -ForegroundColor Yellow
+    Remove-Item "apps\installer\*.zip" -Force -ErrorAction SilentlyContinue
+    Remove-Item "apps\installer\*.exe" -Force -ErrorAction SilentlyContinue
+    Remove-Item "apps\installer\*.aab" -Force -ErrorAction SilentlyContinue
+    Remove-Item "apps\installer\*.apk" -Force -ErrorAction SilentlyContinue
+} else {
     New-Item -ItemType Directory -Path "apps\installer" | Out-Null
 }
 
@@ -137,6 +143,22 @@ if (Test-Path "apps\pc-client\release-builds\win-unpacked") {
     Write-Error "Failed to locate built files for PC Client."
 }
 
+# D. Build Mobile Owner App for Google Play Console
+Write-Host "[BUILD] Building Mobile Owner App (Android App Bundle)..." -ForegroundColor Yellow
+Push-Location apps/mobile-owner
+Write-Host "Running flutter pub get..." -ForegroundColor Gray
+flutter pub get
+Write-Host "Building App Bundle (.aab)..." -ForegroundColor Gray
+flutter build appbundle --release
+if ($LASTEXITCODE -eq 0 -and (Test-Path "build\app\outputs\bundle\release\app-release.aab")) {
+    Pop-Location
+    Copy-Item "apps\mobile-owner\build\app\outputs\bundle\release\app-release.aab" -Destination "apps\installer\YP-Arena-OS-Mobile-Owner.aab" -Force
+    Write-Host "[OK] Created YP-Arena-OS-Mobile-Owner.aab for Play Console" -ForegroundColor Green
+} else {
+    Pop-Location
+    Write-Host "[SKIP] Could not build Mobile Owner App (Missing Android SDK or Flutter error). Please install Android Studio to build mobile apps." -ForegroundColor Red
+}
+
 Write-Host "[OK] All applications successfully compiled and zipped." -ForegroundColor Green
 Write-Host ""
 
@@ -163,6 +185,13 @@ if (Test-Path $installerFile) {
     Write-Host "  2. YP-Arena-OS-Edge-Server.zip        (Upload to S3)" -ForegroundColor Gray
     Write-Host "  3. YP-Arena-OS-Admin-Dashboard.zip    (Upload to S3)" -ForegroundColor Gray
     Write-Host "  4. YP-Arena-OS-Kiosk-Client.zip       (Upload to S3)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "What to upload to Google Play Console:" -ForegroundColor Yellow
+    if (Test-Path "apps\installer\YP-Arena-OS-Mobile-Owner.aab") {
+        Write-Host "  5. YP-Arena-OS-Mobile-Owner.aab       (Ready for Play Console)" -ForegroundColor Gray
+    } else {
+        Write-Host "  5. [Build skipped] Install Android SDK to build Mobile Owner App" -ForegroundColor DarkGray
+    }
 } else {
     Write-Error "ERROR: Compilation finished but the installer executable was not found."
 }

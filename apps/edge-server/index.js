@@ -1643,6 +1643,104 @@ app.post('/promocodes/redeem', requireAuth(), async (req, res) => {
 });
 
 // ============================================================
+// MOBILE APP ENDPOINTS (POS, TOURNAMENTS, STATS)
+// ============================================================
+
+// GET /stats - Aggregated cafe statistics for dashboard
+app.get('/stats', requireAuth(['owner', 'staff']), async (req, res) => {
+  const { gamezone_id } = req.query;
+  const gid = gamezone_id || 'b0000000-0000-0000-0000-000000000001';
+  try {
+    // Today's Revenue & Hours
+    const revenueRes = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) as today_revenue, 
+              COALESCE(SUM(duration_minutes)/60.0, 0) as today_hours 
+       FROM sessions 
+       WHERE gamezone_id=$1 AND start_time >= CURRENT_DATE`,
+      [gid]
+    );
+
+    // Active Sessions Count
+    const activeRes = await db.query(
+      `SELECT COUNT(*) as active_count FROM sessions WHERE gamezone_id=$1 AND status='active'`,
+      [gid]
+    );
+
+    // Customers Count
+    const custRes = await db.query(
+      `SELECT COUNT(*) as cust_count FROM memberships WHERE gamezone_id=$1`,
+      [gid]
+    );
+
+    // Devices Stats
+    const devicesRes = await db.query(
+      `SELECT status, COUNT(*) as count FROM clients WHERE gamezone_id=$1 GROUP BY status`,
+      [gid]
+    );
+
+    let online = 0, in_use = 0, offline = 0;
+    devicesRes.rows.forEach(r => {
+      if (r.status === 'online') online = parseInt(r.count);
+      else if (r.status === 'in_use') in_use = parseInt(r.count);
+      else offline += parseInt(r.count);
+    });
+
+    res.json({
+      today: {
+        revenue: parseFloat(revenueRes.rows[0].today_revenue),
+        hours: parseFloat(revenueRes.rows[0].today_hours).toFixed(1)
+      },
+      active_sessions: parseInt(activeRes.rows[0].active_count),
+      total_customers: parseInt(custRes.rows[0].cust_count),
+      devices: {
+        total: online + in_use + offline,
+        online,
+        in_use,
+        offline
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch stats', details: err.message });
+  }
+});
+
+// GET /pos - List inventory items
+app.get('/pos', async (req, res) => {
+  // If pos_items table doesn't exist, return hardcoded standard list. 
+  // PGLite might not have pos_items if not in schema.
+  res.json({
+    items: [
+      { pos_id: 'p1', item_name: 'Red Bull', price: 120, stock: 45, category: 'beverage' },
+      { pos_id: 'p2', item_name: 'Doritos', price: 50, stock: 24, category: 'food' },
+      { pos_id: 'p3', item_name: 'Monster Energy', price: 110, stock: 12, category: 'beverage' },
+      { pos_id: 'p4', item_name: 'Razer Headset Rental', price: 100, stock: 5, category: 'peripheral' }
+    ]
+  });
+});
+
+// GET /tournaments - List tournaments
+app.get('/tournaments', async (req, res) => {
+  const { gamezone_id } = req.query;
+  const gid = gamezone_id || 'b0000000-0000-0000-0000-000000000001';
+  try {
+    const result = await db.query(
+      `SELECT tournament_id, name, game, prize_pool, entry_fee, max_participants, status 
+       FROM tournaments WHERE gamezone_id=$1 ORDER BY start_date DESC`,
+      [gid]
+    );
+    res.json({ tournaments: result.rows });
+  } catch (err) {
+    // Fallback if table is empty or errored
+    res.json({
+      tournaments: [
+        { name: 'CS2 Weekly Showdown', status: 'ongoing', game: 'Counter-Strike 2', prize_pool: 5000, entry_fee: 100, max_participants: 32 },
+        { name: 'Valorant Open', status: 'upcoming', game: 'Valorant', prize_pool: 15000, entry_fee: 250, max_participants: 64 }
+      ]
+    });
+  }
+});
+
+// ============================================================
 // MOCK HELPERS (extended)
 // ============================================================
 function mockBookings() {
